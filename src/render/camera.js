@@ -178,12 +178,20 @@ export class CameraRig {
       this.target.y + sp * this.dist,
       this.target.z + Math.cos(this.yaw) * cp * this.dist,
     );
-    // stay above the ground
-    const L = cr.locate(cam.position.x, cam.position.z, -1, {});
-    if (L.s > -5 && L.s < 108 && Math.abs(L.d) < 10) {
-      const gy = Math.max(cr.bedH(L.s, L.d), cr.waterLevel(L.s, L.d)) + 0.06;
-      if (cam.position.y < gy) cam.position.y = gy;
+    // keep the line of sight above the banks and the camera above the ground
+    let lift = 0;
+    const tmp = this._loc || (this._loc = {});
+    for (let i = 2; i <= 8; i++) {
+      const f = i / 8;
+      const px = this.target.x + (cam.position.x - this.target.x) * f;
+      const pz = this.target.z + (cam.position.z - this.target.z) * f;
+      const py = this.target.y + (cam.position.y - this.target.y) * f;
+      const L = cr.locate(px, pz, -1, tmp);
+      if (L.s < -5 || L.s > 108 || Math.abs(L.d) > 9.9) continue;
+      const gy = Math.max(cr.bedH(L.s, L.d), cr.waterLevel(L.s, L.d)) + (i === 8 ? 0.06 : 0.03);
+      if (py < gy) lift = Math.max(lift, (gy - py) / f);
     }
+    cam.position.y += lift;
     cam.lookAt(this.target);
     const near = clamp(this.dist * 0.02, 0.01, 0.5);
     if (Math.abs(cam.near - near) > near * 0.2) { cam.near = near; cam.far = 600; cam.updateProjectionMatrix(); }

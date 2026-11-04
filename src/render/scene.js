@@ -136,7 +136,10 @@ export class SceneView {
       dist = 4.2; pitch = 0.75;
     }
     void span;
-    const yaw = this.rig.yawAlong(k === 0 ? 95 : s0) + 0.55;
+    // portrait screens need to stand further back to keep bench, chute and gate in view
+    const aspect = this.camera.aspect;
+    if (aspect < 1) { dist *= Math.min(1.9, 1 / Math.pow(aspect, 0.75)); pitch += 0.12; }
+    const yaw = this.rig.yawAlong(k === 0 ? 95 : s0) + (aspect < 1 ? 0.15 : 0.55);
     if (instant) { this.rig.target.copy(target); this.rig.dist = dist; this.rig.pitch = pitch; this.rig.yaw = yaw; }
     else this.rig.flyTo(target, dist, yaw, pitch);
   }

@@ -116,8 +116,8 @@ export class UI {
     $('#reset').addEventListener('click', () => { if (confirm('Erase all progress and start over?')) this.hooks.reset(); });
     // panel tabs
     root.querySelectorAll('.ptab[data-panel]').forEach((b) => b.addEventListener('click', () => this.showPanel(b.dataset.panel)));
-    $('#collapse').addEventListener('click', () => { this.el.panel.classList.add('hidden'); $('#openPanel').classList.remove('hidden'); });
-    $('#openPanel').addEventListener('click', () => { this.el.panel.classList.remove('hidden'); $('#openPanel').classList.add('hidden'); });
+    $('#collapse').addEventListener('click', () => this.setPanel(false));
+    $('#openPanel').addEventListener('click', () => this.setPanel(true));
     root.querySelectorAll('#shop .tabs button').forEach((b) => b.addEventListener('click', () => { this.tab = b.dataset.tab; this.shopKey = ''; root.querySelectorAll('#shop .tabs button').forEach((x) => x.classList.toggle('on', x === b)); }));
     this.el.items.addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-buy]');
@@ -136,7 +136,13 @@ export class UI {
       } else if (this.game.selectStart(k)) { this.toast(`Moving the workbench to ${STARTS[k].name}`); this.hooks.save(); }
       this.startKey = '';
     });
-    if (window.innerWidth < 760) { this.el.panel.classList.add('hidden'); $('#openPanel').classList.remove('hidden'); }
+    if (window.innerWidth < 760) this.setPanel(false);
+  }
+
+  setPanel(open) {
+    this.el.panel.classList.toggle('hidden', !open);
+    $('#openPanel').classList.toggle('hidden', open);
+    document.body.classList.toggle('panel-open', open);
   }
 
   showPanel(which) {
@@ -149,8 +155,7 @@ export class UI {
   openItem(id) {
     const u = UPGRADE_BY_ID[id];
     if (!u) return;
-    this.el.panel.classList.remove('hidden');
-    $('#openPanel').classList.add('hidden');
+    this.setPanel(true);
     this.showPanel('shop');
     this.tab = u.tab;
     document.querySelectorAll('#shop .tabs button').forEach((x) => x.classList.toggle('on', x.dataset.tab === u.tab));

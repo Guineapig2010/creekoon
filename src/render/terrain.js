@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { S_MIN, S_MAX, MAT } from '../core/creek.js';
 import { fbm, vnoise, mulberry32, clamp, smoothstep } from '../core/noise.js';
 import { STARTS, S_FINISH } from '../core/config.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { detailTexture, grassTexture, barkTexture } from './textures.js';
 
 const COL = {
@@ -10,8 +11,9 @@ const COL = {
   rock: new THREE.Color(0.5, 0.49, 0.46),
   sand: new THREE.Color(0.64, 0.57, 0.43),
   dirt: new THREE.Color(0.4, 0.31, 0.21),
-  grass: new THREE.Color(0.29, 0.4, 0.16),
-  grass2: new THREE.Color(0.42, 0.46, 0.2),
+  grass: new THREE.Color(0.2, 0.31, 0.11),
+  grass2: new THREE.Color(0.32, 0.38, 0.14),
+  litter: new THREE.Color(0.36, 0.3, 0.18),
   moss: new THREE.Color(0.25, 0.33, 0.14),
 };
 
@@ -28,7 +30,11 @@ function dSamples(quality) {
 const ROCKC = [new THREE.Color(0.46, 0.45, 0.42), new THREE.Color(0.55, 0.52, 0.46), new THREE.Color(0.36, 0.36, 0.35)];
 export function grassColor(x, z, out) {
   const n = fbm(x * 0.15, z * 0.15, 2, 5);
-  return out.copy(COL.grass).lerp(COL.grass2, 0.5 + n * 0.5);
+  out.copy(COL.grass).lerp(COL.grass2, 0.5 + n * 0.5);
+  // patches of leaf litter and bare ground under the trees
+  const p = fbm(x * 0.06 + 7, z * 0.06, 2, 9);
+  if (p > 0.15) out.lerp(COL.litter, Math.min(0.55, (p - 0.15) * 2));
+  return out;
 }
 
 export function terrainColor(creek, s, d, h, mat, out, slope = 0, x = 0, z = 0) {
@@ -107,7 +113,7 @@ export function buildTerrain(creek, quality) {
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.setIndex(idx);
   geo.computeVertexNormals();
-  const detail = detailTexture(256, 3, 0.32);
+  const detail = detailTexture(256, 3, 0.42);
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, map: detail, roughness: 0.92, metalness: 0 });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
@@ -165,7 +171,9 @@ export function buildFarTerrain(creek, quality) {
 
 // ---------------------------------------------------------------- rocks
 function rockGeometry(seed) {
-  const g = new THREE.IcosahedronGeometry(1, 3);
+  let g = new THREE.IcosahedronGeometry(1, 3);
+  g.deleteAttribute('normal'); g.deleteAttribute('uv');
+  g = mergeVertices(g);
   const p = g.attributes.position;
   const v = new THREE.Vector3();
   for (let i = 0; i < p.count; i++) {

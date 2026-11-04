@@ -375,10 +375,13 @@ export class FinishStation {
     g.add(rod(R, R.clone().setY(R.y + H), 0.04, MATS.wood));
     const yTop = Math.max(L.y, R.y) + H - 0.05;
     g.add(rod(L.clone().setY(yTop), R.clone().setY(yTop), 0.03, MATS.wood));
-    const banner = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.6, 0.16), new THREE.MeshStandardMaterial({ map: labelTexture('FINISH', { w: 512, h: 112, bg: '#1e3b23', border: '#e8d27a', font: 'bold 70px Georgia, serif' }), side: THREE.DoubleSide, roughness: 0.7 }));
-    banner.position.copy(L).lerp(R, 0.5).setY(yTop - 0.12);
-    banner.rotation.y = yaw + Math.PI / 2;
-    g.add(banner);
+    const bannerMat = new THREE.MeshStandardMaterial({ map: labelTexture('FINISH', { w: 512, h: 112, bg: '#1e3b23', border: '#e8d27a', font: 'bold 70px Georgia, serif' }), roughness: 0.7 });
+    for (const flip of [0, Math.PI]) {
+      const banner = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.6, 0.16), bannerMat);
+      banner.position.copy(L).lerp(R, 0.5).setY(yTop - 0.12);
+      banner.rotation.y = yaw - Math.PI / 2 + flip;
+      g.add(banner);
+    }
     // sensor lamps on post tops
     this.lamps = [];
     for (const p of [L, R]) {

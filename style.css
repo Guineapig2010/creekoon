@@ -105,4 +105,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   #roll .t1 { font-size: 15px; }
   #rollWrap { left: 18px; transform: none; }
   #openPanel { bottom: 24px; right: 14px; }
+  body.panel-open #rollWrap { bottom: calc(52vh + 16px); left: auto; right: 14px; }
+  body.panel-open #roll { width: 84px; height: 84px; }
+  body.panel-open #roll .t2 { display: none; }
 }

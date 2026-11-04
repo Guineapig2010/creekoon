@@ -349,7 +349,7 @@ export class Creek {
     const u = Math.abs(dc) / w;
     let bed, mat;
     // far-field blend towards the smoothed valley elevation
-    const far = smoothstep(2.0, 6.5, Math.abs(dc));
+    const far = smoothstep(1.5, 4.5, Math.abs(dc));
     const base = lerp(y0, this.rY0s[i], far);
     if (u <= 1) {
       const p = 1 - u * u;
@@ -376,7 +376,13 @@ export class Creek {
       bed += rough * 0.8 * n1 + rough * 0.5 * n2;
     } else {
       const rocky = mat === MAT.ROCK ? 1 : 0.5;
-      bed += (0.08 * n1 + 0.02 * n2 * rocky) * smoothstep(0, 0.6, (u - 1) * w);
+      const tb = (u - 1) * w;
+      bed += (0.08 * n1 + 0.02 * n2 * rocky) * smoothstep(0, 0.6, tb);
+      if (mat === MAT.ROCK && Math.abs(bankH) > 0.4) {
+        // blocky, ledged rock faces
+        const rn = Math.abs(fbm(s * 2.2, d * 2.2 + 3.1, 3, 41));
+        bed += (0.1 * rn - 0.03) * smoothstep(0.02, 0.25, tb) * (1 - smoothstep(bankW + 0.5, bankW + 1.6, tb));
+      }
     }
     // ---- island (Alder Bend)
     const isl = this.island;
