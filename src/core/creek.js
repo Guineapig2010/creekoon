@@ -57,8 +57,8 @@ const K = [
   [53.0, 0.45, 0.45, 0.2, 0, 2.00, 0.4, 0.4, 0.9, 0.012, 0.08, G, D],
   // Crawfish Springs
   [54.6, 0.62, 0.62, 0.3, 0, 1.08, 0.35, 0.35, 1.2, 0.01, 0.08, S, D],
-  [55.8, 0.98, 0.98, 0.55, 0.2, 0.65, 0.35, 0.35, 1.2, 0.01, 0.1, S, D],
-  [61.0, 0.92, 0.92, 0.5, 0.1, 0.65, 0.38, 0.38, 1.2, 0.01, 0.1, S, D],
+  [55.8, 0.98, 0.98, 0.55, 0.2, 0.8, 0.35, 0.35, 1.2, 0.01, 0.1, S, D],
+  [61.0, 0.92, 0.92, 0.5, 0.1, 0.85, 0.38, 0.38, 1.2, 0.01, 0.1, S, D],
   [62.3, 0.4, 0.4, 0.2, 0, 0.85, 0.5, 0.5, 0.5, 0.02, 0.12, R, R],
   [62.9, 0.12, 0.12, 0.1, 0.1, 1.55, 0.6, 0.6, 0.35, 0.02, 0.18, R, R],
   [66.4, 0.12, 0.12, 0.1, 1.2, 1.6, 0.6, 0.6, 0.35, 0.02, 0.18, R, R],
@@ -612,6 +612,9 @@ export class Creek {
     for (const [s, dd, r, bury] of [[78.9, 1.0, 0.075, 0.05], [79.05, 1.5, 0.075, 0.3], [78.62, 1.55, 0.065, 0.3], [79.3, 1.1, 0.06, 0.3], [78.95, 0.68, 0.07, 0.2]]) {
       add(s, dd, r, { bury, tag: 'catch', group: 'catchJumble' });
     }
+    // the busiest bottleneck: at the Springs pool outlet two rocks leave a ball-sized notch
+    add(61.92, this.c(61.92) - 0.27, 0.045, { y: this.y0(61.92) - 0.02, bury: 0.5, tag: 'snag', group: 'outletNotch' });
+    add(62.0, this.c(62.0) - 0.375, 0.05, { y: this.y0(62.0) - 0.02, bury: 0.5, tag: 'snag', group: 'outletNotch' });
     // a ball-sized notch between two rocks beside the landing
     add(79.22, this.c(79.22) + 0.1, 0.045, { y: this.y0(79.22) - 0.02, bury: 0.5, tag: 'catch', group: 'catchJumble' });
     add(79.3, this.c(79.3) + 0.2, 0.05, { y: this.y0(79.3) - 0.02, bury: 0.5, tag: 'catch', group: 'catchJumble' });
@@ -650,10 +653,10 @@ export class Creek {
       { s: 38.8, d: 0.5, R: 0.25, v: 0.12, tag: 'undercut' },
       { s: 93.12, d: -0.3, R: 0.12, v: 0.05, trap: 0.05, tag: 'rootPocket' },
       { s: 46.7, d: 0.98, R: 0.34, v: -0.22, trap: 0.11, tag: 'deadPocket' },
-      { s: 56.5, d: -0.7, R: 0.35, v: 0.1 }, { s: 60, d: 0.65, R: 0.35, v: -0.1 },
+      { s: 56.6, d: -0.55, R: 0.36, v: 0.15, trap: 0.05, ring: true, tag: 'springsL' }, { s: 59.8, d: 0.55, R: 0.32, v: -0.14, trap: 0.04, ring: true, tag: 'springsR' },
       // stagnant lower corners of the Springs pool beside the spillway mouth (the busiest bottleneck)
-      { s: 61.75, d: -0.52, R: 0.15, v: 0.04, trap: 0.12, tag: 'cornerL' }, { s: 61.75, d: 0.5, R: 0.15, v: -0.04, trap: 0.12, tag: 'cornerR' },
-      { s: 88.1, d: 0.52, R: 0.36, v: -0.3, trap: 0.2, tag: 'poolEddy' },
+      { s: 61.75, d: -0.52, R: 0.17, v: 0.05, trap: 0.14, tag: 'cornerL' }, { s: 61.75, d: 0.5, R: 0.17, v: -0.05, trap: 0.14, tag: 'cornerR' },
+      { s: 88.2, d: 0.6, R: 0.34, v: -0.32, trap: 0.45, tag: 'poolEddy' },
     ];
     this.eddies = eddies;
     const wetRocks = this.rocks.filter((r) => {
@@ -748,7 +751,12 @@ export class Creek {
             // clockwise (seen from above, s down, d right): tangential = (pd, -ps)/r
             const k = e.v * prof2 / r;
             vs += k * pd * 1; vd += k * -ps;
-            if (e.trap) { const kt = e.trap * prof2 / r; vs -= kt * ps; vd -= kt * pd; }
+            // surface convergence holds floating things on a ring inside the eddy
+            if (e.trap) {
+              // ring eddies hold things circling; still pockets gather them at the centre
+              const kt = e.ring ? e.trap * (r - e.R * 0.6) / e.R * (1 - smoothstep(e.R, e.R * 1.5, r)) / r : e.trap * prof2 / r;
+              vs -= kt * ps; vd -= kt * pd;
+            }
             if (r < e.R * 1.2) { vs *= 0.7; vd *= 0.7; }
           }
           if (u > 1) { const f = 1 - smoothstep(1, 1.15, u); vs *= f; vd *= f; }
@@ -877,7 +885,7 @@ export class Creek {
     // ---- Pool guide boom (floating, at the surface)
     {
       const y = this.y0(88);
-      const pts = [[86.75, 0.5], [87.6, 0.38], [88.4, 0.22], [89.4, 0.16]].map(([s, dd]) => P(s, this.c(s) + dd, y + 0.01));
+      const pts = [[86.9, 0.5], [87.6, 0.4], [88.6, 0.36], [89.5, 0.3]].map(([s, dd]) => P(s, this.c(s) + dd, y + 0.01));
       for (let i = 0; i < pts.length - 1; i++) capsule(pts[i], pts[i + 1], 0.03, MAT.RUBBER, 'poolGuide', 'boom');
       this.poolGuidePts = pts;
     }

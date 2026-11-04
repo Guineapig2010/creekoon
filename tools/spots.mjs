@@ -12,7 +12,7 @@ export const SPOTS = {
   spillway: { k: 3, fix: 'spillRail', sec: [62.3, 67.5] },
   island: { k: 4, fix: 'alderBypass', sec: [44, 50.8] },
   gorgeStep: { k: 5, fix: 'landingBoards', sec: [8.5, 11.5] },
-  arm: { k: 5, fix: 'clearingArm', sec: [59, 63] },
+  arm: { k: 3, fix: 'clearingArm', sec: [59, 63] },
 };
 const which = process.argv[2] ? process.argv[2].split(',') : Object.keys(SPOTS);
 const secs = +(process.argv[3] || 240);
@@ -25,7 +25,7 @@ for (const name of which) {
       const base = [...FULL, ...CREEK.filter((c) => c !== S.fix)];
       const r = runLine(S.k, secs, withFix ? [...base, S.fix] : base, seed, [S.sec]);
       launched += r.launched;
-      for (const [key, v] of Object.entries(r.losses)) { lostAll += v; if (key.startsWith(name + ':') || (name === 'arm' && (key.startsWith('springs') || key.startsWith('spillway')))) lostSpot += v; }
+      for (const [key, v] of Object.entries(r.losses)) { lostAll += v; if (key.startsWith(name + ':') || (name === 'arm' && key.startsWith('outlet'))) lostSpot += v; }
       mean += r.secT[0].mean * r.secT[0].n; n += r.secT[0].n; max = Math.max(max, r.secT[0].max);
     }
     out.push(`${withFix ? 'WITH ' : 'stock'} launched ${launched} lostAtSpot ${lostSpot} (${(lostSpot / launched * 100).toFixed(1)}%) lostAll ${lostAll} section mean ${(mean / n).toFixed(2)}s max ${max.toFixed(1)}s`);

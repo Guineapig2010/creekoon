@@ -17,8 +17,9 @@ const TROUBLE_SPOTS = [
   { id: 'lip', s0: 85.0, s1: 87.6, fix: 'splashGuard', label: 'the waterfall lip' },
   { id: 'pool', s0: 87.6, s1: 90.5, fix: 'poolGuide', label: 'the plunge pool eddy' },
   { id: 'catch', s0: 76.0, s1: 80.5, fix: 'catchRamp', label: 'the Shelf drop' },
-  { id: 'springs', s0: 54.0, s1: 61.8, fix: 'debrisScreen', label: 'the Springs driftwood' },
-  { id: 'spillway', s0: 61.8, s1: 68.0, fix: 'spillRail', label: 'the narrow spillway' },
+  { id: 'springs', s0: 54.0, s1: 61.6, fix: 'debrisScreen', label: 'the Springs driftwood' },
+  { id: 'outlet', s0: 61.6, s1: 62.15, fix: 'clearingArm', label: 'the Springs outlet notch' },
+  { id: 'spillway', s0: 62.15, s1: 68.0, fix: 'spillRail', label: 'the narrow spillway' },
   { id: 'island', s0: 44.0, s1: 50.5, fix: 'alderBypass', label: 'the dead pocket at the island' },
   { id: 'gorgeStep', s0: 8.6, s1: 11.0, fix: 'landingBoards', label: 'the first Gorge drop' },
 ];
@@ -67,6 +68,7 @@ export class Game {
     this.lossLog = []; // [t, spotId]
     this.status = { press: '', feeder: '', creek: '' };
     this.arm = { phase: 0, cd: 0, target: null };
+    this.seenStatus = {};
     this.logs = [0, 2.1, 4.2].map((ph) => ({ ph, x: 0, y: 0, z: 0, ax: 0, az: 0, bx: 0, bz: 0, ang: 0 }));
     this.finishTimes = []; // recent finish timestamps for balls/min
     this.launchSeed = 99;
@@ -303,6 +305,7 @@ export class Game {
       if (this.feederT > interval * 3) this.feederT = interval * 3;
     }
 
+    for (const k of ['press', 'feeder', 'creek']) if (this.status[k]) this.seenStatus[this.status[k]] = this.t;
     // ---- dynamic obstacles
     this.updateLogs(h);
     this.updateArm(h);
@@ -378,10 +381,12 @@ export class Game {
       const inWater = b.sub > 0;
       if (b.progS === undefined) b.progS = s;
       if (s > b.progS + 0.08) { b.progS = s; b.stallT = 0; } else b.stallT += h;
-      if (b.stallT > 3 && inWater && ((b.stallT * 2) | 0) !== (((b.stallT - h) * 2) | 0) && ((b.stallT * 2) | 0) % 4 === 0) {
+      const circling = b.speedAvg > 0.06;
+      const every = circling ? 5 : 2;
+      if (b.stallT > (circling ? 6 : 3) && inWater && Math.floor(b.stallT / every) !== Math.floor((b.stallT - h) / every)) {
         // the creek's own surges eventually work most stalled balls loose
         const fr = cr.frame(s);
-        const push = 0.25 + ballRand(b) * 0.25;
+        const push = (circling ? 0.15 : 0.25) + ballRand(b) * 0.25;
         const side = (ballRand(b) - 0.5) * 0.5;
         b.vx += fr.tx * push + fr.nx * side; b.vz += fr.tz * push + fr.nz * side; b.vy += 0.15;
         this.events.push({ type: 'surge', x: b.x, y: b.y, z: b.z });
@@ -527,16 +532,17 @@ export class Game {
   suggestions() {
     const out = {};
     const owned = this.owned;
-    const firstMissing = (ids) => ids.find((id) => !owned.has(id) && this.canBuy(id).why !== undefined && !this.blocked(id));
-    if (this.status.feeder === 'Hopper empty') {
+    const firstMissing = (ids) => ids.find((id) => !owned.has(id) && !this.blocked(id));
+    const seen = (k, v) => this.status[k] === v || (this.seenStatus[v] !== undefined && this.t - this.seenStatus[v] < 12);
+    if (seen('feeder', 'Hopper empty')) {
       const id = firstMissing(['quickMold', 'twinPress', 'servo', 'turbo']);
       if (id) out[id] = 'Hopper keeps running empty';
     }
-    if (this.status.press === 'Press waiting') {
+    if (seen('press', 'Press waiting')) {
       const id = !owned.has('feeder') ? 'feeder' : firstMissing(['lowFriction', 'indexed', 'spacingSensor', 'hopperExt', 'bulkHopper']);
       if (id) out[id] = 'Press is waiting on a full hopper';
     }
-    if (this.status.creek) {
+    if (seen('creek', 'Creek backed up')) {
       const id = firstMissing(['wideBasket', 'conveyor']);
       if (id) out[id] = 'Balls are backing up at the finish';
     }
@@ -563,7 +569,7 @@ export class Game {
       id: b.id, spec: b.spec, st: b.state, x: b.x, y: b.y, z: b.z, vx: b.vx, vy: b.vy, vz: b.vz,
       wx: b.wx, wy: b.wy, wz: b.wz, q: [b.qx, b.qy, b.qz, b.qw], k: b.start, pay: b.payout, cps: b.cps, cpi: b.cpi,
       paid: b.paid, missed: !!b.missed, wet: b.wet, age: b.age, lt: b.launchT, stall: b.stallT, rs: b.rs,
-      ps: b.prevS, ms: b.maxS, qT: b.qT || 0, wob: b.wob, pg: b.progS,
+      ps: b.prevS, ms: b.maxS, qT: b.qT || 0, wob: b.wob, pg: b.progS, sa: b.speedAvg, sub: b.sub, qi: b.qi,
     }));
     return {
       v: SAVE_VERSION, savedAt: Date.now(), t: this.t, cash: this.cash, owned: [...this.owned], unlocked: this.unlocked,
@@ -571,7 +577,7 @@ export class Game {
       sel: this.reloc ? this.reloc.to : this.sel,
       hopper: this.hopper, pressProg: this.pressProg, pressCount: this.pressCount, feederT: this.feederT, manualCD: this.manualCD,
       nextId: this.nextId, stats: this.stats, recent: this.recent.filter(([t]) => this.t - t < 300), basket: this.basket, drainT: this.drainT,
-      crate: this.crate, settings: this.settings, routeStats: this.routeStats, bestCpm: this.bestCpm, gorgeFinished: this.gorgeFinished,
+      crate: this.crate, settings: this.settings, arm: this.arm, acc: this.acc, physT: this.phys.t, lastLaunch: this.lastLaunch, routeStats: this.routeStats, bestCpm: this.bestCpm, gorgeFinished: this.gorgeFinished,
       lossBySpot: this.lossBySpot, finishTimes: this.finishTimes, lastFinish: this.lastFinish, logs: this.logs.map((l) => l.ph),
       balls,
     };
@@ -599,19 +605,21 @@ export class Game {
     this.lastFinish = d.lastFinish || null;
     if (Array.isArray(d.logs)) d.logs.forEach((ph, i) => { if (this.logs[i]) this.logs[i].ph = ph; });
     this.sessionStart = this.t - 60; // keep the rate window meaningful after reload
-    this.phys.t = this.t;
+    this.phys.t = d.physT ?? this.t;
+    if (d.arm) this.arm = { phase: d.arm.phase || 0, cd: d.arm.cd || 0, target: null };
+    this.acc = d.acc || 0;
     this.phys.balls = (d.balls || []).map((o) => {
       const b = makeBall(o.id, o.spec, o.rs);
       Object.assign(b, {
         x: o.x, y: o.y, z: o.z, vx: o.vx, vy: o.vy, vz: o.vz, wx: o.wx, wy: o.wy, wz: o.wz,
         qx: o.q[0], qy: o.q[1], qz: o.q[2], qw: o.q[3], start: o.k, payout: o.pay, cps: o.cps, cpi: o.cpi,
         paid: o.paid, missed: o.missed, wet: o.wet, age: o.age, launchT: o.lt, stallT: o.stall, state: o.st,
-        prevS: o.ps, maxS: o.ms, qT: o.qT, wob: o.wob || 0, progS: o.pg,
+        prevS: o.ps, maxS: o.ms, qT: o.qT, wob: o.wob || 0, progS: o.pg, speedAvg: o.sa ?? 0.5, sub: o.sub ?? 0, qi: o.qi,
       });
       const L = this.creek.locate(b.x, b.z, -1, {});
       b.hint = L.idx; b.s = L.s; b.d = L.d;
       return b;
     });
-    this.lastLaunch = null;
+    this.lastLaunch = d.lastLaunch && this.phys.balls.some((b) => b.id === d.lastLaunch.id) ? d.lastLaunch : null;
   }
 }
