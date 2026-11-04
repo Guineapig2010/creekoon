@@ -11,17 +11,17 @@ export const S_FINISH = 98.5;
 export const S_BASKET = 99.25;
 
 export const STARTS = [
-  { id: 'grounds', name: 'Old Rolling Grounds', s: 92.0, cost: 0, base: 10, eta: 5, target: '5 s',
+  { id: 'grounds', name: 'Old Rolling Grounds', s: 92.0, cost: 0, base: 10, eta: 5.5, target: '5 s',
     blurb: 'A short launch chute, exposed roots, and a gravel-bed bend.' },
   { id: 'waterfall', name: 'Waterfall Run', s: 80.7, cost: 350, base: 30, eta: 16, target: '14–18 s',
     blurb: 'A rock chute over a waterfall into a plunge pool before the original stretch.' },
-  { id: 'shelf', name: 'Continental Shelf', s: 68.0, cost: 1500, base: 65, eta: 30, target: '26–34 s',
+  { id: 'shelf', name: 'Continental Shelf', s: 68.0, cost: 1500, base: 65, eta: 31, target: '26–34 s',
     blurb: 'A shelf along the right side near the waterfall. A short exposed drop feeds the waterfall approach.' },
-  { id: 'springs', name: 'Crawfish Springs', s: 54.0, cost: 6500, base: 120, eta: 47, target: '42–52 s',
+  { id: 'springs', name: 'Crawfish Springs', s: 54.0, cost: 6500, base: 120, eta: 48, target: '42–52 s',
     blurb: 'A spring-fed pool above the Shelf, followed by a narrow rocky spillway.' },
-  { id: 'alder', name: 'Alder Bend', s: 34.0, cost: 22000, base: 220, eta: 67, target: '60–74 s',
+  { id: 'alder', name: 'Alder Bend', s: 34.0, cost: 22000, base: 220, eta: 72, target: '60–74 s',
     blurb: 'An undercut bank, a split around a gravel island, and a rejoin before the Springs.' },
-  { id: 'gorge', name: 'Upper Gorge', s: 0.0, cost: 75000, base: 400, eta: 95, target: '85–105 s',
+  { id: 'gorge', name: 'Upper Gorge', s: 0.0, cost: 75000, base: 400, eta: 100, target: '85–105 s',
     blurb: 'Two steep rock steps and a short stretch of whitewater above Alder Bend.' },
 ];
 

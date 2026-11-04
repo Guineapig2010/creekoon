@@ -14,8 +14,8 @@ export const SAVE_VERSION = 1;
 const TROUBLE_SPOTS = [
   { id: 'root', s0: 92.6, s1: 94.2, fix: 'rootRail', label: 'the exposed root' },
   { id: 'gravel', s0: 94.2, s1: 96.4, fix: 'gravelMat', label: 'the rough gravel' },
-  { id: 'lip', s0: 85.0, s1: 86.6, fix: 'splashGuard', label: 'the waterfall lip' },
-  { id: 'pool', s0: 86.6, s1: 90.5, fix: 'poolGuide', label: 'the plunge pool eddy' },
+  { id: 'lip', s0: 85.0, s1: 87.6, fix: 'splashGuard', label: 'the waterfall lip' },
+  { id: 'pool', s0: 87.6, s1: 90.5, fix: 'poolGuide', label: 'the plunge pool eddy' },
   { id: 'catch', s0: 76.0, s1: 80.5, fix: 'catchRamp', label: 'the Shelf drop' },
   { id: 'springs', s0: 54.0, s1: 61.8, fix: 'debrisScreen', label: 'the Springs driftwood' },
   { id: 'spillway', s0: 61.8, s1: 68.0, fix: 'spillRail', label: 'the narrow spillway' },
@@ -367,16 +367,18 @@ export class Game {
       // into the basket
       if (s >= S_BASKET - 0.2) {
         if (!b.paid) { this.lose(b, 'missed the gate', i); continue; }
-        if (this.basket.length < this.numbers.basketCap && !this.queueCount()) { this.toBasket(b); balls.splice(i, 1); continue; }
+        if (this.basket.length < this.numbers.basketCap && !this.queueCount()) { this.toBasket(b); continue; }
         b.state = 'queue'; b.qT = this.t;
         this.placeQueue();
         continue;
       }
       if (b.paid) continue;
-      // stall handling
+      // stall handling: a ball is stalled when it stops making downstream progress
+      // (wedged, pinned, or circling in an eddy)
       const inWater = b.sub > 0;
-      if (b.speedAvg < 0.035) b.stallT += h; else b.stallT = Math.max(0, b.stallT - h * 2);
-      if (b.stallT > 2.5 && inWater && ((b.stallT * 2) | 0) !== (((b.stallT - h) * 2) | 0) && ((b.stallT * 2) | 0) % 4 === 0) {
+      if (b.progS === undefined) b.progS = s;
+      if (s > b.progS + 0.08) { b.progS = s; b.stallT = 0; } else b.stallT += h;
+      if (b.stallT > 3 && inWater && ((b.stallT * 2) | 0) !== (((b.stallT - h) * 2) | 0) && ((b.stallT * 2) | 0) % 4 === 0) {
         // the creek's own surges eventually work most stalled balls loose
         const fr = cr.frame(s);
         const push = 0.25 + ballRand(b) * 0.25;
@@ -392,7 +394,7 @@ export class Game {
       if (s < -4.5 || s > 107 || Math.abs(d) > 9.5) reason = 'left the creek';
       else if (b.y < cr.bedH(s, d) - 0.25) reason = 'left the creek';
       else if (off > 0.5 && b.stallT > 3) reason = 'escaped onto the bank';
-      else if (b.stallT > (inWater ? 16 : 8)) reason = inWater ? 'stuck in an eddy' : 'wedged';
+      else if (b.stallT > (inWater ? 22 : 8)) reason = b.speedAvg > 0.05 ? 'stuck in an eddy' : 'wedged';
       else if (b.age > Math.max(40, this.etaFor(b.start) * 3.2)) reason = 'took too long';
       if (reason) this.lose(b, reason, i);
     }
@@ -497,14 +499,14 @@ export class Game {
         // the sweep reaches the stalled balls: set them back in the main current at the same spot
         const cr = this.creek;
         for (const b of this.phys.balls) {
-          if (b.state !== 'roll' || b.paid || b.s < ARM.s0 || b.s > ARM.s1 || b.stallT < 0.8) continue;
+          if (b.state !== 'roll' || b.paid || b.s < ARM.s0 || b.s > ARM.s1 || b.stallT < 1.5) continue;
           const s = b.s;
           const d = cr.c(s) + (s > 62.2 ? 0 : 0.1);
           const p = cr.worldXZ(s, d);
           b.x = p.x; b.z = p.z; b.y = cr.y0(s) + BALL_R * 0.25;
           const fr = cr.frame(s);
           b.vx = fr.tx * 0.35; b.vz = fr.tz * 0.35; b.vy = 0;
-          b.stallT = 0; b.speedAvg = 0.4; b.hint = -1;
+          b.stallT = 0; b.progS = s; b.speedAvg = 0.4; b.hint = -1;
           this.events.push({ type: 'armClear', id: b.id, x: b.x, y: b.y, z: b.z });
         }
       }
@@ -513,7 +515,7 @@ export class Game {
     }
     if (!this.owned.has('clearingArm') || A.cd > 0) return;
     for (const b of this.phys.balls) {
-      if (b.state === 'roll' && !b.paid && b.s >= ARM.s0 && b.s <= ARM.s1 && b.stallT > 1.2) {
+      if (b.state === 'roll' && !b.paid && b.s >= ARM.s0 && b.s <= ARM.s1 && b.stallT > 2.2) {
         A.phase = 1e-6;
         this.events.push({ type: 'armSweep' });
         break;
@@ -561,7 +563,7 @@ export class Game {
       id: b.id, spec: b.spec, st: b.state, x: b.x, y: b.y, z: b.z, vx: b.vx, vy: b.vy, vz: b.vz,
       wx: b.wx, wy: b.wy, wz: b.wz, q: [b.qx, b.qy, b.qz, b.qw], k: b.start, pay: b.payout, cps: b.cps, cpi: b.cpi,
       paid: b.paid, missed: !!b.missed, wet: b.wet, age: b.age, lt: b.launchT, stall: b.stallT, rs: b.rs,
-      ps: b.prevS, ms: b.maxS, qT: b.qT || 0, wob: b.wob,
+      ps: b.prevS, ms: b.maxS, qT: b.qT || 0, wob: b.wob, pg: b.progS,
     }));
     return {
       v: SAVE_VERSION, savedAt: Date.now(), t: this.t, cash: this.cash, owned: [...this.owned], unlocked: this.unlocked,
@@ -604,7 +606,7 @@ export class Game {
         x: o.x, y: o.y, z: o.z, vx: o.vx, vy: o.vy, vz: o.vz, wx: o.wx, wy: o.wy, wz: o.wz,
         qx: o.q[0], qy: o.q[1], qz: o.q[2], qw: o.q[3], start: o.k, payout: o.pay, cps: o.cps, cpi: o.cpi,
         paid: o.paid, missed: o.missed, wet: o.wet, age: o.age, launchT: o.lt, stallT: o.stall, state: o.st,
-        prevS: o.ps, maxS: o.ms, qT: o.qT, wob: o.wob || 0,
+        prevS: o.ps, maxS: o.ms, qT: o.qT, wob: o.wob || 0, progS: o.pg,
       });
       const L = this.creek.locate(b.x, b.z, -1, {});
       b.hint = L.idx; b.s = L.s; b.d = L.d;

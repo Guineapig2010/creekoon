@@ -36,8 +36,8 @@ const K = [
   [-5, 0.36, 0.36, 0.11, 0, 1.2, 1.3, 1.3, 0.45, 0.03, 0.08, R, R],
   [0, 0.34, 0.34, 0.11, 0, 1.35, 1.25, 1.25, 0.45, 0.03, 0.1, R, R],
   [8.9, 0.28, 0.28, 0.09, 0, 1.7, 1.2, 1.2, 0.45, 0.025, 0.12, R, R],
-  [9.1, 0.5, 0.5, 0.36, 0, 0.9, 1.0, 1.0, 0.5, 0.02, 0.25, R, R],
-  [10.6, 0.5, 0.45, 0.3, 0.05, 1.0, 1.0, 1.0, 0.5, 0.02, 0.18, R, R],
+  [9.1, 0.5, 0.5, 0.36, 0, 0.9, 1.0, 0.22, 0.12, 0.02, 0.25, R, R],
+  [10.6, 0.5, 0.45, 0.3, 0.05, 1.0, 1.0, 0.4, 0.3, 0.02, 0.18, R, R],
   [11.6, 0.33, 0.33, 0.12, 0.1, 1.5, 1.1, 1.1, 0.45, 0.03, 0.12, R, R],
   [19.9, 0.28, 0.28, 0.09, 0, 1.75, 1.2, 1.2, 0.45, 0.025, 0.12, R, R],
   [20.1, 0.48, 0.48, 0.34, 0, 0.9, 1.0, 1.0, 0.5, 0.02, 0.25, R, R],
@@ -46,15 +46,15 @@ const K = [
   [29.5, 0.29, 0.29, 0.12, 0, 1.8, 1.0, 1.0, 0.45, 0.035, 0.32, R, R],
   [33.0, 0.38, 0.38, 0.15, 0, 1.15, 0.6, 0.6, 0.8, 0.02, 0.12, R, D],
   // Alder Bend
-  [34.5, 0.42, 0.42, 0.17, 0, 1.96, 0.45, 0.45, 0.9, 0.012, 0.08, G, D],
-  [38.0, 0.48, 0.55, 0.24, 0.9, 1.75, 0.42, 0.6, 0.9, 0.012, 0.08, G, D],
-  [41.5, 0.45, 0.5, 0.2, 0.6, 1.86, 0.42, 0.5, 0.9, 0.012, 0.08, G, D],
-  [44.2, 0.62, 0.68, 0.18, 0.05, 1.70, 0.4, 0.42, 0.9, 0.012, 0.08, G, D],
-  [45.6, 0.92, 0.76, 0.18, -0.1, 1.57, 0.4, 0.42, 0.9, 0.012, 0.08, G, D],
-  [46.7, 1.28, 0.76, 0.18, -0.1, 1.49, 0.42, 0.42, 0.9, 0.012, 0.08, G, D],
-  [48.0, 0.86, 0.74, 0.18, -0.2, 1.61, 0.42, 0.42, 0.9, 0.012, 0.08, G, D],
-  [50.2, 0.48, 0.48, 0.2, -0.3, 1.82, 0.42, 0.42, 0.9, 0.012, 0.08, G, D],
-  [53.0, 0.45, 0.45, 0.2, 0, 1.82, 0.4, 0.4, 0.9, 0.012, 0.08, G, D],
+  [34.5, 0.42, 0.42, 0.17, 0, 2.16, 0.45, 0.45, 0.9, 0.012, 0.08, G, D],
+  [38.0, 0.48, 0.55, 0.24, 0.9, 1.93, 0.42, 0.6, 0.9, 0.012, 0.08, G, D],
+  [41.5, 0.45, 0.5, 0.2, 0.6, 2.05, 0.42, 0.5, 0.9, 0.012, 0.08, G, D],
+  [44.2, 0.62, 0.68, 0.18, 0.05, 1.87, 0.4, 0.42, 0.9, 0.012, 0.08, G, D],
+  [45.6, 0.78, 1.05, 0.18, -0.1, 1.73, 0.4, 0.42, 0.9, 0.012, 0.08, G, D],
+  [46.7, 0.8, 1.3, 0.18, -0.1, 1.64, 0.42, 0.42, 0.9, 0.012, 0.08, G, D],
+  [48.0, 0.75, 1.0, 0.18, -0.2, 1.77, 0.42, 0.42, 0.9, 0.012, 0.08, G, D],
+  [50.2, 0.48, 0.48, 0.2, -0.3, 2.00, 0.42, 0.42, 0.9, 0.012, 0.08, G, D],
+  [53.0, 0.45, 0.45, 0.2, 0, 2.00, 0.4, 0.4, 0.9, 0.012, 0.08, G, D],
   // Crawfish Springs
   [54.6, 0.62, 0.62, 0.3, 0, 1.08, 0.35, 0.35, 1.2, 0.01, 0.08, S, D],
   [55.8, 0.98, 0.98, 0.55, 0.2, 0.65, 0.35, 0.35, 1.2, 0.01, 0.1, S, D],
@@ -72,9 +72,13 @@ const K = [
   [79.6, 0.3, 0.3, 0.14, 0.75, 1.6, 0.45, 0.5, 0.4, 0.025, 0.15, R, R],
   // Waterfall Run
   [80.7, 0.28, 0.28, 0.14, 0.2, 1.8, 0.45, 0.5, 0.4, 0.025, 0.15, R, R],
+  [85.25, 0.25, 0.25, 0.12, 0, 2.05, 0.5, 0.5, 0.4, 0.02, 0.12, R, R],
+  [85.55, 0.25, 0.25, 0.12, 0, 2.1, 0.5, 0.5, 0.4, 0.02, 0.12, R, R],
   [85.9, 0.25, 0.25, 0.12, 0, 2.1, 0.5, 0.5, 0.4, 0.02, 0.12, R, R],
-  [86.1, 0.8, 0.8, 0.9, 0, 0.6, 1.0, 1.0, 0.5, 0.015, 0.3, S, R],
-  [88.6, 0.8, 0.98, 0.45, 0, 0.8, 1.0, 1.0, 0.5, 0.015, 0.14, S, R],
+  [86.1, 0.42, 0.42, 0.9, 0, 0.6, 0.14, 0.14, 0.06, 0.015, 0.3, S, S],
+  [86.9, 0.5, 0.5, 0.8, 0, 0.6, 0.18, 0.18, 0.08, 0.015, 0.25, S, S],
+  [87.6, 0.65, 0.65, 0.7, 0, 0.62, 1.0, 1.0, 0.4, 0.015, 0.22, S, R],
+  [88.6, 0.8, 0.98, 0.45, 0, 0.8, 1.0, 0.8, 0.5, 0.015, 0.14, S, R],
   [90.5, 0.42, 0.42, 0.18, 0, 1.35, 0.4, 0.4, 0.8, 0.012, 0.08, G, D],
   // Old Rolling Grounds
   [92.0, 0.4, 0.42, 0.06, 0, 1.74, 0.26, 0.3, 0.8, 0.01, 0.08, G, D],
@@ -325,11 +329,12 @@ export class Creek {
       ];
       return pad;
     });
-    this.island = { s0: 44.9, s1: 49.4, dOff: 0.16, halfW: 0.27, h: 0.09 };
+    this.island = { s0: 44.9, s1: 49.4, dOff: 0.36, halfW: 0.25, h: 0.09 };
     // Exposed gravel bar on the inside of the Grounds bend
     this.gravelBar = { s0: 94.4, s1: 96.6, side: 1 };
     this.roughPatch = { s0: 95.05, s1: 95.95 };
     this.matOn = false;
+    this.potholes = [];
   }
 
   /** Raw bed function (used only for baking). */
@@ -426,6 +431,19 @@ export class Creek {
           if (bed > floor) bed = lerp(bed, floor, m);
         }
       }
+    }
+    // ---- dry hollows behind the low rims of the plunge pool: balls kicked out of the
+    // pool settle there and cannot roll back
+    if (s > 86.25 && s < 88.4 && u > 1) {
+      const t = (u - 1) * w;
+      const ms = Math.sin(Math.PI * (s - 86.25) / 2.15);
+      bed -= 0.16 * ms * Math.exp(-((t - 0.32) ** 2) / 0.012);
+    }
+    // ---- potholes worn into the dry rock shelf beside the waterfall lip
+    for (const ph of this.potholes) {
+      const ds = s - ph.s, dd = d - (c + ph.d);
+      const r2 = ds * ds + dd * dd;
+      if (r2 < ph.r * ph.r * 2.2) bed -= ph.depth * Math.exp(-r2 / (ph.r * ph.r * 0.5));
     }
     // ---- basket area: shallow catch pan after the gate
     if (out) out.mat = mat;
@@ -570,8 +588,10 @@ export class Creek {
       const s = 9.55;
       const c = this.c(s);
       add(s + 0.05, c - 0.2, 0.085, { bury: 0.25, tag: 'landing', group: 'gorgeLanding' });
-      add(s - 0.05, c + 0.18, 0.08, { bury: 0.25, tag: 'landing', group: 'gorgeLanding' });
+      add(s - 0.08, c + 0.09, 0.08, { bury: 0.05, tag: 'landing', group: 'gorgeLanding' });
       add(s + 0.35, c + 0.02, 0.07, { bury: 0.3, tag: 'landing', group: 'gorgeLanding' });
+      add(10.0, this.c(10.0) + 0.18, 0.045, { y: this.y0(10.0) - 0.03, bury: 0.5, tag: 'landing', group: 'gorgeLanding' });
+      add(10.08, this.c(10.08) + 0.28, 0.05, { y: this.y0(10.08) - 0.03, bury: 0.5, tag: 'landing', group: 'gorgeLanding' });
     }
     // whitewater boulders
     for (let s = 22.8; s < 29.2; s += 0.9 + rnd() * 0.5) {
@@ -586,15 +606,23 @@ export class Creek {
     // Spillway snag rocks protruding from the sides (balls stall in their lee)
     for (const [s, side] of [[63.4, 1], [64.3, -1], [65.1, 1], [65.9, -1]]) {
       const c = this.c(s), w = 0.12;
-      add(s, c + side * (w + 0.015), 0.07, { bury: 0.35, tag: 'snag' });
+      add(s, c + side * (w + 0.03), 0.085, { bury: 0.12, tag: 'snag' });
     }
     // Shelf catch area jumble (below the drop)
-    for (const [s, dd, r] of [[78.82, 1.02, 0.07], [79.05, 1.5, 0.075], [78.62, 1.55, 0.065], [79.3, 1.1, 0.06], [78.95, 0.72, 0.07]]) {
-      add(s, dd, r, { bury: 0.3, tag: 'catch', group: 'catchJumble' });
+    for (const [s, dd, r, bury] of [[78.9, 1.0, 0.075, 0.05], [79.05, 1.5, 0.075, 0.3], [78.62, 1.55, 0.065, 0.3], [79.3, 1.1, 0.06, 0.3], [78.95, 0.68, 0.07, 0.2]]) {
+      add(s, dd, r, { bury, tag: 'catch', group: 'catchJumble' });
     }
+    // a ball-sized notch between two rocks beside the landing
+    add(79.22, this.c(79.22) + 0.1, 0.045, { y: this.y0(79.22) - 0.02, bury: 0.5, tag: 'catch', group: 'catchJumble' });
+    add(79.3, this.c(79.3) + 0.2, 0.05, { y: this.y0(79.3) - 0.02, bury: 0.5, tag: 'catch', group: 'catchJumble' });
     // Waterfall lip rocks (sideways bounces) and approach boulders
-    add(85.92, this.c(85.92) - 0.2, 0.065, { bury: 0.45, tag: 'lip' });
-    add(85.9, this.c(85.9) + 0.2, 0.07, { bury: 0.45, tag: 'lip' });
+    // horn rocks sitting right on the waterfall lip
+    // horn rocks on the waterfall lip; beside each a smaller rock leaves a ball-sized notch
+    for (const side of [-1, 1]) {
+      add(85.95, this.c(85.95) + side * 0.13, 0.05, { y: this.y0(85.95) - 0.02, bury: 0.5, tag: 'lip' });
+      add(85.99, this.c(85.99) + side * 0.235, 0.045, { y: this.y0(85.99) - 0.015, bury: 0.5, tag: 'lip' });
+    }
+    add(85.9, this.c(85.9) + 0.23, 0.07, { bury: 0.3, tag: 'lip' });
     for (const [s, dd, r] of [[81.5, 0.18, 0.05], [83.2, -0.16, 0.05], [84.6, 0.15, 0.045]]) add(s, this.c(s) + dd, r, { bury: 0.45, tag: 'stone' });
     // Grounds: rocks in the gravel bend
     for (const [s, dd, r] of [[96.2, -0.28, 0.06], [97.5, 0.3, 0.05]]) add(s, this.c(s) + dd, r, { bury: 0.45, tag: 'stone' });
@@ -620,10 +648,12 @@ export class Creek {
       { s: 9.35, d: 0.32, R: 0.2, v: 0.25 }, { s: 9.35, d: -0.32, R: 0.2, v: -0.25 },
       { s: 20.4, d: 0.3, R: 0.2, v: 0.22 }, { s: 20.4, d: -0.3, R: 0.2, v: -0.22 },
       { s: 38.8, d: 0.5, R: 0.25, v: 0.12, tag: 'undercut' },
-      { s: 46.6, d: -0.95, R: 0.32, v: -0.2, tag: 'deadPocket' },
+      { s: 93.12, d: -0.3, R: 0.12, v: 0.05, trap: 0.05, tag: 'rootPocket' },
+      { s: 46.7, d: 0.98, R: 0.34, v: -0.22, trap: 0.11, tag: 'deadPocket' },
       { s: 56.5, d: -0.7, R: 0.35, v: 0.1 }, { s: 60, d: 0.65, R: 0.35, v: -0.1 },
-      { s: 88.0, d: 0.68, R: 0.36, v: 0.24, tag: 'poolEddy' },
-      { s: 87.2, d: -0.55, R: 0.25, v: -0.1 },
+      // stagnant lower corners of the Springs pool beside the spillway mouth (the busiest bottleneck)
+      { s: 61.75, d: -0.52, R: 0.15, v: 0.04, trap: 0.12, tag: 'cornerL' }, { s: 61.75, d: 0.5, R: 0.15, v: -0.04, trap: 0.12, tag: 'cornerR' },
+      { s: 88.1, d: 0.52, R: 0.36, v: -0.3, trap: 0.2, tag: 'poolEddy' },
     ];
     this.eddies = eddies;
     const wetRocks = this.rocks.filter((r) => {
@@ -657,16 +687,17 @@ export class Creek {
             const ts = clamp((s - isl.s0) / (isl.s1 - isl.s0), 0, 1);
             const push = Math.exp(-di * di / 0.08) * Math.sin(Math.PI * ts);
             vd += Math.sign(di || 1) * push * 0.25 * (s < (isl.s0 + isl.s1) / 2 ? 1 : -1);
-            if (dc < -0.75 && s > 45.6 && s < 47.8) sp *= 0.15; // dead pocket: almost still
+            if (dc > 0.8 && s > 45.8 && s < 47.8) sp *= 0.15; // dead pocket: almost still
           }
           // plunge pool roller below the waterfall
           if (s > 86.02 && s < 87.25) {
             const rs = (s - 86.02) / 1.23;
-            const lat = 1 - smoothstep(0.15, 0.5, Math.abs(dc));
-            sp = lerp(sp, -0.28 * Math.sin(Math.PI * clamp(rs * 1.05, 0, 1)), lat);
-            // the roller spills outwards along the falls face
-            vd += Math.sign(dc || 0.01) * 0.16 * Math.sin(Math.PI * rs) * (1 - smoothstep(0.4, 0.75, Math.abs(dc)));
+            const lat = 1 - smoothstep(0.1, 0.24, Math.abs(dc));
+            sp = lerp(Math.max(sp, 0.45), -0.28 * Math.sin(Math.PI * clamp(rs * 1.05, 0, 1)), lat);
+            // the roller spills outwards along the falls face, then leaves along the sides
+            vd += Math.sign(dc || 0.01) * 0.06 * Math.sin(Math.PI * rs) * (1 - smoothstep(0.2, 0.32, Math.abs(dc)));
           }
+          // the plunge pool's outflow skews towards its outside (left) edge
           // gorge step pools have smaller rollers
           for (const st of [STEPS[0], STEPS[1]]) {
             if (s > st.s + 0.02 && s < st.s + 0.55) {
@@ -702,6 +733,13 @@ export class Creek {
             const ns2 = vx * dirS - vy * dirD, nd2 = vx * dirD + vy * dirS;
             vs += ns2 - dirS * sp; vd += nd2 - dirD * sp;
           }
+          // eddies are sheltered: the main current is mostly absent inside them
+          for (const e of nearEddies) {
+            if (!e.trap) continue;
+            const r = Math.hypot(s - e.s, dc - e.d);
+            const f = 0.08 + 0.92 * smoothstep(e.R * 0.55, e.R * 1.25, r);
+            vs *= f; vd *= f;
+          }
           for (const e of nearEddies) {
             const ps = s - e.s, pd = dc - e.d;
             const r = Math.hypot(ps, pd);
@@ -710,6 +748,7 @@ export class Creek {
             // clockwise (seen from above, s down, d right): tangential = (pd, -ps)/r
             const k = e.v * prof2 / r;
             vs += k * pd * 1; vd += k * -ps;
+            if (e.trap) { const kt = e.trap * prof2 / r; vs -= kt * ps; vd -= kt * pd; }
             if (r < e.R * 1.2) { vs *= 0.7; vd *= 0.7; }
           }
           if (u > 1) { const f = 1 - smoothstep(1, 1.15, u); vs *= f; vd *= f; }
@@ -803,40 +842,42 @@ export class Creek {
     }
     const capsule = (a, b, r, mat, group, tag) => cols.push({ type: 1, ax: a[0], ay: a[1], az: a[2], bx: b[0], by: b[1], bz: b[2], r, mat, group, tag });
     this.capsule = capsule;
-    // ---- exposed root at Old Rolling Grounds (arches from the right bank into the channel)
+    // ---- exposed root at Old Rolling Grounds: comes out of the left bank, lies along the
+    // surface and dives into the bed. Near the bank it lifts just enough to trap a ball.
     {
-      const s1 = 93.15, s2 = 93.45, s3 = 93.72;
-      const c2 = this.c(s2);
-      const yb = this.y0(s2);
-      const A = P(s1, this.c(s1) + this.wR(s1) + 0.28, this.bedH(s1, this.c(s1) + this.wR(s1) + 0.28) + 0.01);
-      const B = P(s2, c2 + 0.24, yb + 0.07);
-      const C = P(s3, this.c(s3) + 0.02, this.bedH(s3, this.c(s3) + 0.02) + 0.0);
+      const sA = 92.98, sB = 93.36, sC = 93.62;
+      const cA = this.c(sA), cB = this.c(sB), cC = this.c(sC);
+      const A0 = P(sA - 0.12, cA - this.wL(sA) - 0.32, this.bedH(sA - 0.12, cA - this.wL(sA) - 0.32) + 0.015);
+      const A = P(sA, cA - this.wL(sA) + 0.04, this.y0(sA) + 0.03);
+      const B = P(sB, cB - 0.13, this.y0(sB) + 0.014);
+      const C = P(sC, cC + 0.03, this.bedH(sC, cC + 0.03) - 0.005);
+      // a short spur reaching back upstream from the root's elbow forms a notch against the bank
+      const D = P(sA - 0.13, this.c(sA - 0.13) - 0.3, this.y0(sA - 0.13) + 0.012);
+      capsule(A0, A, 0.028, MAT.WOOD, 'root', 'root');
       capsule(A, B, 0.026, MAT.WOOD, 'root', 'root');
       capsule(B, C, 0.022, MAT.WOOD, 'root', 'root');
-      this.rootPts = [A, B, C];
-      // Root Bend Rail: low rail in front of the gap under the root, angled to steer balls to the centre
-      const ra = P(93.0, this.c(93.0) + 0.08, this.y0(93.0) + 0.02);
-      const rb = P(93.42, this.c(93.42) + this.wR(93.42) + 0.06, this.y0(93.42) + 0.025);
+      capsule(A, D, 0.02, MAT.WOOD, 'root', 'root');
+      this.rootPts = [A0, A, B, C];
+      this.rootSpur = [A, D];
+      // Root Bend Rail: closes the mouth of the notch so balls slide past the root's tip
+      const sr = sA - 0.36, dr = this.c(sr) - this.wL(sr) - 0.12;
+      const ra = P(sr, dr, Math.max(this.bedH(sr, dr), this.y0(sr)) + 0.016);
+      const rb = P(sA - 0.06, this.c(sA - 0.06) - 0.19, this.y0(sA - 0.06) + 0.016);
       capsule(ra, rb, 0.012, MAT.METAL, 'rootRail', 'rail');
       this.rootRailPts = [ra, rb];
     }
-    // ---- Splash guard: side walls at the waterfall lip
+    // ---- Splash guard: angled boards at the lip turn balls that glance off the horn rocks
+    // back into the centre slot instead of into the notches beside them
     {
-      const mk = [];
       for (const side of [-1, 1]) {
-        const s0 = 85.3, s1 = 86.7;
-        const yTop = this.y0(85.9) + 0.22;
-        const yBot = this.y0(86.4) + 0.05;
-        const d = side * 0.36;
-        const a = P(s0, this.c(s0) + d, yTop), b = P(s1, this.c(s1) + side * 0.62, yBot);
-        mk.push(this.obbFromSegment(a, b, 0.012, 0.14, MAT.WOOD, 'splashGuard'));
+        const a = P(85.4, this.c(85.4) + side * 0.25, this.y0(85.4) + 0.03), b = P(85.92, this.c(85.92) + side * 0.112, this.y0(85.92) + 0.03);
+        cols.push(this.obbFromSegment(a, b, 0.01, 0.06, MAT.WOOD, 'splashGuard'));
       }
-      for (const o of mk) cols.push(o);
     }
     // ---- Pool guide boom (floating, at the surface)
     {
       const y = this.y0(88);
-      const pts = [[86.75, 0.35], [87.6, 0.42], [88.6, 0.46], [89.35, 0.36]].map(([s, dd]) => P(s, this.c(s) + dd, y + 0.01));
+      const pts = [[86.75, 0.5], [87.6, 0.38], [88.4, 0.22], [89.4, 0.16]].map(([s, dd]) => P(s, this.c(s) + dd, y + 0.01));
       for (let i = 0; i < pts.length - 1; i++) capsule(pts[i], pts[i + 1], 0.03, MAT.RUBBER, 'poolGuide', 'boom');
       this.poolGuidePts = pts;
     }
@@ -859,13 +900,16 @@ export class Creek {
     {
       for (const side of [-1, 1]) {
         const pts = [];
-        for (let s = 62.75; s <= 66.9; s += 0.35) pts.push(P(s, this.c(s) + side * 0.075, this.y0(s) + 0.03));
+        const w0 = side < 0 ? this.wL(62.15) : this.wR(62.15);
+        pts.push(P(62.15, this.c(62.15) + side * (w0 + 0.03), this.y0(62.15) + 0.02));
+        pts.push(P(62.6, this.c(62.6) + side * 0.17, this.y0(62.6) + 0.022));
+        for (let s = 62.95; s <= 66.9; s += 0.35) pts.push(P(s, this.c(s) + side * 0.075, this.y0(s) + 0.025));
         for (let i = 0; i < pts.length - 1; i++) capsule(pts[i], pts[i + 1], 0.01, MAT.METAL, 'spillRail', 'rail');
       }
     }
     // ---- Alder bypass guide: closes off the dead pocket mouth
     {
-      const pts = [[45.2, -0.52], [46.2, -0.66], [47.3, -0.62], [48.1, -0.48]].map(([s, dd]) => P(s, this.c(s) + dd, this.y0(s) + 0.02));
+      const pts = [[44.9, 0.56], [45.8, 0.66], [46.7, 0.73], [47.5, 0.76], [48.4, 0.74]].map(([s, dd]) => P(s, this.c(s) + dd, this.y0(s) + 0.02));
       for (let i = 0; i < pts.length - 1; i++) capsule(pts[i], pts[i + 1], 0.02, MAT.WOOD, 'alderBypass', 'boom');
       this.bypassPts = pts;
     }
@@ -873,7 +917,10 @@ export class Creek {
     {
       const y = this.y0(9.5);
       const a = P(9.12, this.c(9.12), y + 0.02), b = P(9.95, this.c(9.95), y - 0.02);
-      cols.push(this.obbFromSegment(a, b, 0.42, 0.012, MAT.WOOD, 'landingBoards', true));
+      cols.push(this.obbFromSegment(a, b, 0.5, 0.012, MAT.WOOD, 'landingBoards', true));
+      // a side board on the boards' downstream end turns balls away from the notch
+      const ga = P(9.6, this.c(9.6) + 0.32, this.y0(9.6) + 0.03), gb = P(10.12, this.c(10.12) + 0.05, this.y0(10.12) + 0.03);
+      cols.push(this.obbFromSegment(ga, gb, 0.01, 0.05, MAT.WOOD, 'landingBoards'));
       this.landingBoards = { a, b };
     }
     // ---- Spring debris screen (fixed posts)
