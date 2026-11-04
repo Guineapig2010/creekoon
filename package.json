@@ -1,0 +1,17 @@
+{
+  "name": "creek-rolling-tycoon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Make tennis balls, roll them down a creek, build a factory.",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --format=iife --target=es2020 --minify --sourcemap --outfile=dist/game.js",
+    "dev": "esbuild src/main.js --bundle --format=iife --target=es2020 --sourcemap --outfile=dist/game.js --watch",
+    "serve": "node tools/serve.mjs",
+    "playtest": "node tools/playtest.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.2",
+    "three": "0.170.0"
+  }
+}
