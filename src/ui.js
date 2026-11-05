@@ -113,7 +113,15 @@ export class UI {
     $('#optSound').addEventListener('change', (e) => { s.sound = e.target.checked; this.audio.unlock(); this.audio.setEnabled(s.sound); this.hooks.save(); });
     $('#optAuto').addEventListener('change', (e) => { s.auto = e.target.checked; this.hooks.save(); });
     $('#optQuality').addEventListener('change', (e) => { s.quality = e.target.value; this.view.setQuality(s.quality); this.hooks.save(); });
-    $('#reset').addEventListener('click', () => { if (confirm('Erase all progress and start over?')) this.hooks.reset(); });
+    // two-step reset (browser confirm dialogs are not available everywhere)
+    let armed = 0;
+    $('#reset').addEventListener('click', (e) => {
+      const b = e.currentTarget;
+      if (performance.now() - armed < 4000) { this.hooks.reset(); return; }
+      armed = performance.now();
+      b.textContent = 'Tap again to erase all progress';
+      setTimeout(() => { if (performance.now() - armed >= 3900) b.textContent = 'Reset save…'; }, 4000);
+    });
     // panel tabs
     root.querySelectorAll('.ptab[data-panel]').forEach((b) => b.addEventListener('click', () => this.showPanel(b.dataset.panel)));
     $('#collapse').addEventListener('click', () => this.setPanel(false));
