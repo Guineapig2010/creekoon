@@ -232,3 +232,10 @@ body:has(#balldetail:not(.hidden)) #rollWrap, body:has(#mapUI:not(.hidden)) #rol
   .ptab { font-size: 12px; }
   #openPanel { bottom: 168px; right: 86px; }
 }
+#hud, #topright, #panel, #openPanel, #rollWrap { z-index: 2; }
+#mapUI { z-index: 1; }
+#touch.dim #tInteract { display: none; }
+@media (max-width: 760px) {
+  #legend { display: none; }
+}
+#mbody { display: flex; flex-direction: column; min-height: 0; flex: 1; overflow: hidden; }

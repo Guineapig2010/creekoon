@@ -384,9 +384,9 @@ export class Game {
     const r0 = reachAt(st.s);
     for (let r = r0; r >= 0; r--) {
       const R = this.reachStats[r];
-      if (R.count >= REACHES[r].cap) {
+      if (R.count >= this.reachCap(r)) {
         // fair turns: only the longest-waiting site blocked on this reach may take a freed slot
-        if (R.count >= REACHES[r].cap + 1 || (R.turn !== undefined && R.turn !== k)) return `${REACHES[r].name} backed up`;
+        if (R.count >= this.reachCap(r) + 1 || (R.turn !== undefined && R.turn !== k)) return `${REACHES[r].name} backed up`;
       }
     }
     // yield to balls passing the launch from upstream sites
@@ -399,6 +399,12 @@ export class Game {
     return '';
   }
 
+  /** Safe number of balls in flight on reach r (some fixes raise it). */
+  reachCap(r) { const R = REACHES[r]; return R.capStock && !this.owned.has(R.capFix) ? R.capStock : R.cap; }
+
+  // TUNING: network ball budget (balls rolling at once); the yield window and 3 s fairness
+  // timeout live in admission(); Splitstone balanced alternation is 1.4 s (updateGates);
+  // carts move at 1.6 m/s with a 4 s lift (1.5 s with Fast Lift).
   get ballBudget() { return this.settings.ballBudget || 650; }
 
   // ------------------------------------------------------------------ simulation
@@ -490,7 +496,7 @@ export class Game {
     for (const R of this.reachStats) R.turn = undefined;
     const waitingSites = this.sites.map((s, k) => ({ s, k })).filter((x) => x.s.open && x.s.waitT > 0).sort((a, b) => b.s.waitT - a.s.waitT);
     for (const { k } of waitingSites) {
-      for (let r = reachAt(STARTS[k].s); r >= 0; r--) if (this.reachStats[r].count >= REACHES[r].cap && this.reachStats[r].turn === undefined) this.reachStats[r].turn = k;
+      for (let r = reachAt(STARTS[k].s); r >= 0; r--) if (this.reachStats[r].count >= this.reachCap(r) && this.reachStats[r].turn === undefined) this.reachStats[r].turn = k;
     }
     void waiting;
     // legacy status mirrors for the selected site
@@ -590,7 +596,7 @@ export class Game {
     for (let r = 0; r < n; r++) {
       const R = this.reachStats[r];
       R.count = counts[r];
-      R.congested = counts[r] >= REACHES[r].cap * 0.85;
+      R.congested = counts[r] >= this.reachCap(r) * 0.85;
     }
   }
 
@@ -599,7 +605,7 @@ export class Game {
       const site = this.sites[k];
       if (!site.open || site.gap > 0) continue;
       let worst = 0;
-      for (let r = reachAt(STARTS[k].s); r >= 0; r--) worst = Math.max(worst, this.reachStats[r].count / REACHES[r].cap);
+      for (let r = reachAt(STARTS[k].s); r >= 0; r--) worst = Math.max(worst, this.reachStats[r].count / this.reachCap(r));
       const want = worst > 0.85 ? 1.6 : worst > 0.6 ? 1.2 : 1;
       site.autoGapK += (want - site.autoGapK) * 0.5;
     }
@@ -701,7 +707,7 @@ export class Game {
       const o = this.findOrder(b.orderId);
       if (o) {
         o.reserved = Math.max(0, o.reserved - 1); o.paid++; o.earned += b.orderBonus;
-        if (o.twoPosts) o.perPost[b.start] = (o.perPost[b.start] || 0) + 1;
+        if (o.twoPosts) { o.perPost[b.start] = (o.perPost[b.start] || 0) + 1; o.perPostRes[b.start] = Math.max(0, (o.perPostRes[b.start] || 0) - 1); }
         if (o === this.order && o.paid >= o.target) this.completeOrder();
       }
     }
@@ -721,7 +727,7 @@ export class Game {
     for (const sp of TROUBLE_SPOTS) if (b.s >= sp.s0 && b.s < sp.s1) { spot = sp.id; break; }
     this.lossBySpot[spot] = (this.lossBySpot[spot] || 0) + 1;
     this.lossLog.push([this.t, spot]);
-    if (b.orderId) { const o = this.findOrder(b.orderId); if (o) o.reserved = Math.max(0, o.reserved - 1); }
+    if (b.orderId) { const o = this.findOrder(b.orderId); if (o) { o.reserved = Math.max(0, o.reserved - 1); if (o.twoPosts) o.perPostRes[b.start] = Math.max(0, (o.perPostRes[b.start] || 0) - 1); } }
     // a production loss is a simulated factory outcome only; it never touches the archive
     this.events.push({ type: 'lost', id: b.id, reason, x: b.x, y: b.y, z: b.z, spot, start: b.start });
     this.phys.balls.splice(i, 1);
@@ -1025,6 +1031,7 @@ export class Game {
         else { cart.reserved = 0; this.goCart(cart, WORKSHOP.s, 'toYard'); }
       } else if (cart.state === 'returning') {
         const src = this.sites[cart.src];
+        src.stats.transferredOut -= cart.load.length; // the undelivered balls come home
         src.hopper.push(...cart.load.splice(0));
         cart.reserved = 0;
         this.goCart(cart, WORKSHOP.s, 'toYard');
@@ -1154,7 +1161,7 @@ export class Game {
     }
     for (let r = 0; r < REACHES.length; r++) {
       const R = this.reachStats[r];
-      if (R.count >= REACHES[r].cap && REACHES[r].id === 'willow' && !this.owned.has('willowFlare') && !this.blocked('willowFlare')) out.willowFlare = 'Willow Narrows is full: the pinch limits every factory above it';
+      if (R.count >= this.reachCap(r) && REACHES[r].id === 'willow' && !this.owned.has('willowFlare') && !this.blocked('willowFlare')) out.willowFlare = 'Willow Narrows is full: the pinch limits every factory above it';
     }
     const N = this.siteNumbers(this.sel);
     if (site.owned.has('feeder') && !site.owned.has('spacingSensor') && N.feeder < 1.25 && !this.blocked('spacingSensor')) out.spacingSensor = 'This feeder is faster than its landing buffer';
@@ -1167,8 +1174,8 @@ export class Game {
     let worst = null;
     for (let r = REACHES.length - 1; r >= 0; r--) {
       const R = this.reachStats[r];
-      const ratio = R.count / REACHES[r].cap;
-      if (ratio >= 0.9 && (!worst || ratio > worst.ratio)) worst = { kind: 'reach', r, ratio, text: `${REACHES[r].name} is full (${R.count}/${REACHES[r].cap} balls): factories above it are waiting`, s: (REACHES[r].s0 + REACHES[r].s1) / 2 };
+      const ratio = R.count / this.reachCap(r);
+      if (ratio >= 0.9 && (!worst || ratio > worst.ratio)) worst = { kind: 'reach', r, ratio, text: `${REACHES[r].name} is full (${R.count}/${this.reachCap(r)} balls): factories above it are waiting`, s: (REACHES[r].s0 + REACHES[r].s1) / 2 };
     }
     if (this.queueCount() >= 2) return { kind: 'finish', text: `${this.queueCount()} paid balls queued at the finish basket`, s: S_FINISH };
     if (worst) return worst;

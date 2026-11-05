@@ -440,12 +440,14 @@ export class UI {
     svg += `<rect width="${W}" height="${H}" class="fm-bg"/>`;
     for (const l of REGIONAL) svg += `<path d="${path(l)}" class="fm-main"/>`;
     for (const f of FIELD) {
+      if (view === 'whole') break; // the whole-creek view shows only the reach box
       if (f.type === 'Polygon') svg += `<path d="${path(f.coords)}Z" class="fm-area" style="stroke:${f.stroke}"><title>${esc(f.name)}</title></path>`;
       else if (f.type === 'LineString') svg += `<path d="${path(f.coords)}" class="fm-line ${f.key === 'shelf-line' ? 'dash' : ''}" style="stroke:${f.stroke}"><title>${esc(f.name)}</title></path>`;
     }
     for (const f of FIELD) {
       if (f.type !== 'Point') continue;
       const [x, y] = f.coords;
+      if (view === 'whole') continue;
       if (f.group === 'photo') svg += `<g class="fm-pin"><circle cx="${X(x)}" cy="${Y(y)}" r="8"/><text x="${X(x)}" y="${Y(y) + 4}">${esc(f.code)}</text><title>${esc(f.name)} — camera viewpoint</title></g>`;
       else svg += `<g><circle cx="${X(x)}" cy="${Y(y)}" r="4" class="fm-pt" style="fill:${f.stroke}"/>${view !== 'whole' ? `<text x="${X(x) + 7}" y="${Y(y) + 4}" class="fm-lab">${esc(f.name)}</text>` : ''}<title>${esc(f.name)}</title></g>`;
     }
@@ -560,9 +562,9 @@ export class UI {
       const delays = this.reachDelays();
       this.el.reachList.innerHTML = `<div class="rlh">Reaches (downstream first)</div>` + REACHES.map((R, r) => {
         const S = g.reachStats[r];
-        const ratio = S.count / R.cap;
+        const ratio = S.count / g.reachCap(r);
         const open = STARTS.some((st, k) => g.sites[k].open && st.s < R.s1);
-        return `<div class="rl ${ratio >= 0.9 ? 'hot' : ratio > 0.6 ? 'warm' : ''} ${open ? '' : 'dim'}" data-reach="${r}"><span>${esc(R.name)}</span><span>${S.count}/${R.cap}${delays[r] !== null ? ` · ${delays[r] >= 0 ? '+' : ''}${delays[r].toFixed(1)} s` : ''}</span></div>`;
+        return `<div class="rl ${ratio >= 0.9 ? 'hot' : ratio > 0.6 ? 'warm' : ''} ${open ? '' : 'dim'}" data-reach="${r}"><span>${esc(R.name)}</span><span>${S.count}/${g.reachCap(r)}${delays[r] !== null ? ` · ${delays[r] >= 0 ? '+' : ''}${delays[r].toFixed(1)} s` : ''}</span></div>`;
       }).join('');
     }
     // labels over the world
@@ -768,8 +770,8 @@ export class UI {
     if (g.owned.has('flowMonitor')) {
       const delays = this.reachDelays();
       let worst = -1, wv = -1;
-      g.reachStats.forEach((S, r) => { const v = S.count / REACHES[r].cap + Math.max(0, delays[r] || 0) / 20; if (v > wv) { wv = v; worst = r; } });
-      parts.push(`<h3>Flow Monitor</h3><table class="rec">${REACHES.map((R, r) => { const S = g.reachStats[r]; if (!S.count && delays[r] === null) return ''; return `<tr class="${r === worst && S.count ? 'hl' : ''}"><th>${esc(R.name)}</th><td>${S.count} in flight (cap ${R.cap})${delays[r] !== null ? ` · avg delay ${delays[r].toFixed(1)} s` : ''}</td></tr>`; }).join('')}</table>${worst >= 0 && g.reachStats[worst].count ? `<p class="why">Holding back the line: ${esc(REACHES[worst].name)}</p>` : ''}`);
+      g.reachStats.forEach((S, r) => { const v = S.count / g.reachCap(r) + Math.max(0, delays[r] || 0) / 20; if (v > wv) { wv = v; worst = r; } });
+      parts.push(`<h3>Flow Monitor</h3><table class="rec">${REACHES.map((R, r) => { const S = g.reachStats[r]; if (!S.count && delays[r] === null) return ''; return `<tr class="${r === worst && S.count ? 'hl' : ''}"><th>${esc(R.name)}</th><td>${S.count} in flight (cap ${g.reachCap(r)})${delays[r] !== null ? ` · avg delay ${delays[r].toFixed(1)} s` : ''}</td></tr>`; }).join('')}</table>${worst >= 0 && g.reachStats[worst].count ? `<p class="why">Holding back the line: ${esc(REACHES[worst].name)}</p>` : ''}`);
     } else parts.push(`<p class="hint">Buy the Flow Monitor (Controls) to see delay and congestion by reach.</p>`);
     if (g.owned.has('pressureAlerts')) { const a = g.pressureAlert(); parts.push(`<h3>Pressure Alerts</h3><p>${a ? `⚠ ${esc(a.text)} <button data-goalert="${a.s}" class="ghost">Show on map</button>` : 'No queue is slowing the line.'}</p>`); }
     if (g.owned.has('splitTimers')) {

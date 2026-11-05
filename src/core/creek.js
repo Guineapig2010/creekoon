@@ -393,6 +393,7 @@ export class Creek {
     });
     this.island = { s0: 44.9, s1: 49.4, dOff: 0.36, halfW: 0.25, h: 0.09 };
     // islands that split the flow into two lanes which rejoin downstream
+    // TUNING / game geometry: islands that split the flow (Splitstone and the Sluice rib are game-only).
     this.islands = [
       this.island,
       { s0: -51.0, s1: -41.5, dOff: -0.36, halfW: 0.3, h: 0.14, rock: true, name: 'Splitstone' },
@@ -400,20 +401,25 @@ export class Creek {
     ];
     // the alternate route at the waterfall split: a stepped cascade on the creek-left that
     // rejoins the plunge pool. The primary (creek-right) route goes over the falls.
+    // PROVISIONAL: waterfall route split position and the alternate branch path, compressed to
+    // game scale from the creator's map (split about 20 ft below the taped sign).
     this.alt = { s0: 83.3, s1: 89.9, w: 0.2, D: 0.09, U: 1.25, off: -1.35 };
     this.alt.ya = null; // filled after rows exist
     // Crawfish Springs double-pond spring and its runoff chute (right bank, above the pool)
+    // PROVISIONAL: double-pond outlines are illustrative, not surveyed.
     this.ponds = [
       { s: 56.9, dOff: 1.75, rs: 0.95, rd: 0.62, depth: 0.32, lift: 0.34 },
       { s: 58.5, dOff: 1.9, rs: 0.85, rd: 0.58, depth: 0.3, lift: 0.3 },
     ];
     this.runoff = { s0: 58.9, s1: 59.6, dTop: 1.35, dBot: 0.85 };
     // Code Rot observations (simulated): strongest at the Springs, patchy upstream to the Shelf head
+    // TUNING: Code Rot observation zones (simulated; strongest at the Springs).
     this.codeRot = [
       { s: 58.2, dOff: 0.9, r: 1.4, k: 1.0 }, { s: 56.3, dOff: -1.2, r: 1.0, k: 0.7 }, { s: 60.8, dOff: 0.8, r: 0.9, k: 0.8 },
       { s: 63.8, dOff: 0.5, r: 0.7, k: 0.45 }, { s: 66.5, dOff: 1.6, r: 0.8, k: 0.35 },
     ];
     // Flat Rocks slabs (right side of the Shelf route)
+    // PROVISIONAL: Flat Rocks slab placement.
     this.slabs = [
       { s0: 72.7, s1: 74.1, d0: 0.06, d1: 0.9, h: 0.05, undercut: true },
       { s0: 74.0, s1: 75.0, d0: 0.08, d1: 0.75, h: 0.07, undercut: true },

@@ -13,6 +13,9 @@ export const S_BASKET = 99.25;
 // Launch sites, downstream first. `id` is the stable save identifier.
 // `after`: the site that must be open before this one can be bought.
 // `layer`: 'base' (base game), 'field' (a historical Creek Rolling location), 'game' (game-only headwater).
+// TUNING: launch positions (s, metres from the top of the model), costs, base payouts and
+// target run times. New-reach positions are game geography (layer 'game'); Flat Rocks is a
+// PROVISIONAL placement of the mapped historical start on the Shelf route.
 export const STARTS = [
   { id: 'grounds', name: 'Old Rolling Grounds', s: 92.0, cost: 0, base: 10, eta: 5.5, target: '5 s', after: null, layer: 'base',
     blurb: 'A short launch chute, exposed roots, and a gravel-bed bend.' },
@@ -46,6 +49,7 @@ export const STARTS = [
 export const SITE_INDEX = Object.fromEntries(STARTS.map((s, i) => [s.id, i]));
 
 // Merge checkpoints after a fork rejoins (either lane is legal).
+// TUNING: merge checkpoints where forks rejoin (each lane must pass them to be paid).
 export const MERGES = [
   { s: 90.3, name: 'Waterfall route merge' },
   { s: 50.6, name: 'Alder island rejoin' },
@@ -64,6 +68,7 @@ export function checkpointsFor(startIndex) {
 }
 
 // Reaches for the flow monitor, congestion and backpressure (downstream first).
+// TUNING: safe balls in flight per reach (backpressure caps for fair release).
 export const REACHES = [
   { id: 'grounds', name: 'Old Rolling Grounds', s0: 92.0, s1: 99.3, cap: 26 },
   { id: 'waterfall', name: 'Waterfall Run', s0: 80.7, s1: 92.0, cap: 34 },
@@ -72,7 +77,7 @@ export const REACHES = [
   { id: 'alder', name: 'Alder Bend & the Clearing', s0: 34.0, s1: 54.0, cap: 50 },
   { id: 'gorge', name: 'Upper Gorge', s0: 0, s1: 34.0, cap: 70 },
   { id: 'slate', name: 'Slate Steps', s0: -16, s1: 0, cap: 34 },
-  { id: 'willow', name: 'Willow Narrows', s0: -34, s1: -16, cap: 34 },
+  { id: 'willow', name: 'Willow Narrows', s0: -34, s1: -16, cap: 34, capStock: 16, capFix: 'willowFlare' }, // TUNING: the stock root pinch is only safe at 16 balls in flight
   { id: 'splitstone', name: 'Splitstone Fork', s0: -56, s1: -34, cap: 50 },
   { id: 'longeddy', name: 'Long Eddy Basin', s0: -78, s1: -56, cap: 50 },
   { id: 'spillway', name: 'Spillway Falls', s0: -102, s1: -78, cap: 50 },
@@ -86,6 +91,7 @@ export function reachAt(s) {
 
 // ---------------------------------------------------------------- recipes
 // pct: bonus as a fraction of route base. Physical tradeoffs are applied in physics.js.
+// TUNING: recipe bonus percentages and handling effects (effects live in physics.js).
 export const RECIPES = [
   { id: 'standard', name: 'Standard', area: null, pct: 0, felt: [1, 1, 1], tag: 'STD',
     note: 'The current ball with your installed upgrades.' },
@@ -108,6 +114,7 @@ export function recipeBonus(base, recipe) {
 
 // ---------------------------------------------------------------- shipment orders
 // minSite: index of the shortest qualifying launch ("from X or farther" = that site or further upstream).
+// TUNING: order targets, bonuses, caps and unlock sites.
 export const ORDERS = [
   { id: 'dry', name: 'Dry Delivery', recipe: 'dryweave', minSite: 'springs', target: 20, bonus: 30, opens: 'springs',
     text: 'Dry-Weave from Crawfish Springs or farther' },
@@ -346,6 +353,7 @@ export function bonusForSpec(f) {
 }
 
 /** Per-site machine numbers from that site's owned set. */
+// TUNING: machine timings (press cycle, feeder interval, felt line, hopper size, changeover).
 export function factoryNumbers(owned) {
   let press = 3.0;
   if (owned.has('quickMold')) press = 2.2;

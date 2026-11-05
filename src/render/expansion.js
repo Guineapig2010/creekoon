@@ -19,6 +19,8 @@ export const NEW_SPOTS = {
 };
 
 /** Historical / field-note landmarks and their game placement status. */
+// PROVISIONAL: every mapped landmark below is an approximate placement in game coordinates;
+// unmapped landmarks have no position on purpose.
 export function landmarkPlacements(cr) {
   const P = (s, dOff, side = 0) => { const d = cr.c(s) + dOff; const p = cr.worldXZ(s, d); return { s, d, x: p.x, y: Math.max(cr.bedH(s, d), cr.y0(s)), z: p.z }; };
   return [
