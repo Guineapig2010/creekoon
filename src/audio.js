@@ -6,7 +6,7 @@ export class Audio {
     this.enabled = true;
     this.voices = {};
     this.last = {};
-    this.limits = { wood: [4, 0.04], rock: [5, 0.03], splash: [4, 0.05], finish: [3, 0.06], bump: [3, 0.05], press: [2, 0.1], ui: [2, 0.05], cash: [2, 0.08], arm: [1, 0.3], lost: [1, 0.4] };
+    this.limits = { step: [2, 0.12], wood: [4, 0.04], rock: [5, 0.03], splash: [4, 0.05], finish: [3, 0.06], bump: [3, 0.05], press: [2, 0.1], ui: [2, 0.05], cash: [2, 0.08], arm: [1, 0.3], lost: [1, 0.4] };
   }
 
   unlock() {
@@ -40,6 +40,14 @@ export class Audio {
     this.amb = this.loopNoise(700, 0.6, 0.0);
     this.ambHi = this.loopNoise(2600, 0.8, 0.0);
     this.fall = this.loopNoise(400, 0.4, 0.0);
+    // machine hum: a low buzzing drone near running presses
+    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 58;
+    const o2 = ctx.createOscillator(); o2.type = 'square'; o2.frequency.value = 117;
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 260;
+    const hg = ctx.createGain(); hg.gain.value = 0;
+    o.connect(f); o2.connect(f); f.connect(hg); hg.connect(this.master);
+    o.start(); o2.start();
+    this.hum = hg;
   }
 
   loopNoise(freq, q, gain) {
@@ -59,9 +67,10 @@ export class Audio {
   }
 
   /** Ambience follows how close the camera is to the water and the falls. */
-  ambience(nearWater, nearFalls, t) {
+  ambience(nearWater, nearFalls, t, machine = 0) {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
+    if (this.hum) this.hum.gain.setTargetAtTime(0.035 * machine * machine, now, 0.2);
     const wob = 0.85 + 0.15 * Math.sin(t * 0.7) * Math.sin(t * 0.23 + 1);
     this.amb.g.gain.setTargetAtTime(0.16 * nearWater * wob, now, 0.3);
     this.ambHi.g.gain.setTargetAtTime(0.05 * nearWater, now, 0.3);
@@ -109,9 +118,16 @@ export class Audio {
   }
 
   play(kind, intensity = 1, atten = 1) {
-    const v = Math.min(1, intensity) * atten;
+    const v = kind === 'step' ? 1 : Math.min(1, intensity) * atten;
     if (v < 0.03) return;
     switch (kind) {
+      case 'step': // footsteps: gravel crunch, soft mud, a splash in the shallows, rock tap
+        if (!this.allow('step')) return; this.claim('step', 0.12);
+        if (intensity === 'water') { this.burst('step', { freq: 1600, q: 0.7, type: 'lowpass', dur: 0.18, vol: 0.12, sweepTo: 500 }); break; }
+        if (intensity === 1) { this.burst('step', { freq: 2600, q: 3, dur: 0.04, vol: 0.12, white: true }); break; }
+        if (intensity === 0) { this.burst('step', { freq: 1900, q: 1.2, dur: 0.09, vol: 0.12, white: true }); this.burst('step', { freq: 900, q: 1, dur: 0.06, vol: 0.06, delay: 0.03 }); break; }
+        this.burst('step', { freq: 380, q: 0.8, type: 'lowpass', dur: 0.09, vol: 0.14 });
+        break;
       case 'wood': // hollow knock
         if (!this.allow('wood')) return; this.claim('wood', 0.12);
         this.tone('wood', { freq: 210 + Math.random() * 40, dur: 0.09, vol: 0.32 * v, to: 160 });

@@ -18,6 +18,7 @@ export class CameraRig {
     this.pointers = new Map();
     this.onPick = null;
     this.moved = 0;
+    this.enabled = false;
     this.bind();
   }
 
@@ -25,12 +26,14 @@ export class CameraRig {
     const el = this.dom;
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     el.addEventListener('pointerdown', (e) => {
+      if (!this.enabled) return;
       el.setPointerCapture(e.pointerId);
       this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button, sx: e.clientX, sy: e.clientY });
       this.moved = 0;
       if (this.pointers.size === 2) this.pinch = this.pinchInfo();
     });
     el.addEventListener('pointermove', (e) => {
+      if (!this.enabled) return;
       const p = this.pointers.get(e.pointerId);
       if (!p) return;
       const dx = e.clientX - p.x, dy = e.clientY - p.y;
@@ -63,6 +66,7 @@ export class CameraRig {
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', up);
     el.addEventListener('wheel', (e) => {
+      if (!this.enabled) return;
       e.preventDefault();
       this.zoom(Math.exp(e.deltaY * 0.0012));
       this.userMoved(true);
@@ -168,7 +172,7 @@ export class CameraRig {
     // keep target on the ground
     if (this.follow == null) {
       const L = cr.locate(this.target.x, this.target.z, -1, {});
-      const ground = Math.max(cr.bedH(clamp(L.s, -5, 108), clamp(L.d, -10, 10)), cr.y0(clamp(L.s, -5, 108)));
+      const ground = Math.max(cr.bedH(clamp(L.s, -151, 108), clamp(L.d, -10, 10)), cr.y0(clamp(L.s, -151, 108)));
       this.target.y += (ground - this.target.y) * (1 - Math.exp(-dt * 6));
     }
     const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
@@ -187,13 +191,13 @@ export class CameraRig {
       const pz = this.target.z + (cam.position.z - this.target.z) * f;
       const py = this.target.y + (cam.position.y - this.target.y) * f;
       const L = cr.locate(px, pz, -1, tmp);
-      if (L.s < -5 || L.s > 108 || Math.abs(L.d) > 9.9) continue;
+      if (L.s < -151 || L.s > 107 || Math.abs(L.d) > 9.9) continue;
       const gy = Math.max(cr.bedH(L.s, L.d), cr.waterLevel(L.s, L.d)) + (i === 8 ? 0.06 : 0.03);
       if (py < gy) lift = Math.max(lift, (gy - py) / f);
     }
     cam.position.y += lift;
     cam.lookAt(this.target);
-    const near = clamp(this.dist * 0.02, 0.01, 0.5);
+    const near = clamp(this.dist * 0.02, 0.01, 0.3);
     if (Math.abs(cam.near - near) > near * 0.2) { cam.near = near; cam.far = 600; cam.updateProjectionMatrix(); }
   }
 }

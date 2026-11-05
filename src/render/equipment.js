@@ -7,7 +7,7 @@ import { woodTexture, barkTexture, labelTexture } from './textures.js';
 const V = (a) => new THREE.Vector3(a[0], a[1], a[2]);
 
 export const MATS = {};
-function mats() {
+export function mats() {
   if (MATS.wood) return MATS;
   MATS.wood = new THREE.MeshStandardMaterial({ map: woodTexture(256, '#a0703f'), roughness: 0.8 });
   MATS.darkWood = new THREE.MeshStandardMaterial({ map: woodTexture(256, '#6b4a2a'), roughness: 0.85 });
@@ -37,12 +37,12 @@ function mats() {
   return MATS;
 }
 
-function box(w, h, d, mat, x = 0, y = 0, z = 0) {
+export function box(w, h, d, mat, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
   m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
   return m;
 }
-function cyl(r0, r1, h, mat, seg = 12) {
+export function cyl(r0, r1, h, mat, seg = 12) {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, h, seg), mat);
   m.castShadow = true; m.receiveShadow = true;
   return m;
@@ -64,7 +64,7 @@ export function obbMesh(c, mat) {
   m.position.set(c.cx, c.cy, c.cz);
   return m;
 }
-function capsuleMesh(c, mat) {
+export function capsuleMesh(c, mat) {
   const g = new THREE.Group();
   const a = new THREE.Vector3(c.ax, c.ay, c.az), b = new THREE.Vector3(c.bx, c.by, c.bz);
   g.add(rod(a, b, c.r, mat));
@@ -72,7 +72,7 @@ function capsuleMesh(c, mat) {
   return g;
 }
 
-function sprite(tex, w, h) {
+export function sprite(tex, w, h) {
   const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
   m.scale.set(w, h, 1);
   return m;
@@ -80,8 +80,9 @@ function sprite(tex, w, h) {
 
 // ======================================================================= Workshop
 export class Workshop {
-  constructor(scene, creek) {
+  constructor(scene, creek, k = 0) {
     this.creek = creek;
+    this.site = k;
     mats();
     const g = new THREE.Group();
     this.group = g;
@@ -122,6 +123,16 @@ export class Workshop {
     this.k = -1;
     this.anim = { press: 0, flap: 0, wheel: 0, hand: 0, headKick: [0, 0] };
     this.home = new THREE.Matrix4();
+    // site sign and expansion stations
+    this.extras = new THREE.Group(); g.add(this.extras);
+    this.signLabel = sprite(labelTexture([STARTS[k].name, 'New Creek Nation factory'], { w: 640, h: 160, font: 'bold 46px Georgia, serif', bg: '#24361f' }), 0.72, 0.18);
+    this.signLabel.position.set(0.45, 2.25, 0.3);
+    g.add(rod([0.45, 0, 0.3], [0.45, 2.14, 0.3], 0.018, MATS.darkWood));
+    g.add(this.signLabel);
+    this.counterCanvas = document.createElement('canvas'); this.counterCanvas.width = 256; this.counterCanvas.height = 128;
+    this.counterTex = new THREE.CanvasTexture(this.counterCanvas); this.counterTex.colorSpace = THREE.SRGBColorSpace;
+    this.counterT = 0;
+    this.placeAt(k);
   }
 
   frameFor(k, out = {}) {
@@ -192,6 +203,27 @@ export class Workshop {
     if (key === this.config) return;
     this.config = key;
     const has = (id) => owned.has(id);
+    // expansion stations: batch counter, infeed tray, felt tables, shape gauge, NCN stamp, replica jig
+    this.extras.clear();
+    this.counter = null;
+    if (has('batchCounter')) {
+      const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.11), new THREE.MeshBasicMaterial({ map: this.counterTex }));
+      scr.position.set(-0.3, 1.0, -0.17);
+      this.extras.add(box(0.24, 0.13, 0.03, MATS.darkSteel, -0.3, 1.0, -0.19));
+      this.extras.add(scr);
+      this.extras.add(rod([-0.3, 0.6, -0.19], [-0.3, 0.94, -0.19], 0.008, MATS.darkSteel));
+      this.counter = scr;
+    }
+    if (has('infeedTray')) this.extras.add(box(0.16, 0.02, 0.12, MATS.steel, -0.82, 0.62, 0.12));
+    if (has('fastFelt')) this.extras.add(box(0.22, 0.03, 0.18, new THREE.MeshStandardMaterial({ color: 0xcfe03c, roughness: 1 }), -0.15, 0.565, 0.18));
+    if (has('parallelFelt')) this.extras.add(box(0.22, 0.03, 0.18, new THREE.MeshStandardMaterial({ color: 0xb8cc30, roughness: 1 }), 0.1, 0.565, 0.2));
+    if (has('shapeGauge')) { this.extras.add(box(0.08, 0.12, 0.08, MATS.blue, -0.08, 0.66, -0.06)); this.extras.add(rod([-0.08, 0.72, -0.06], [-0.2, 0.72, -0.06], 0.006, MATS.steel)); }
+    if (has('ncnStamp')) {
+      this.extras.add(box(0.12, 0.2, 0.1, MATS.red, 0.3, 0.66, -0.15));
+      const lab = sprite(labelTexture('NCN', { w: 256, h: 96, font: 'bold 64px sans-serif', bg: '#7a1d14', border: '#f6f1d8' }), 0.14, 0.05);
+      lab.position.set(0.3, 0.84, -0.15); this.extras.add(lab);
+    }
+    if (has('replicaJig')) this.extras.add(box(0.1, 0.1, 0.1, MATS.brass, 0.42, 0.61, 0.15));
     // press
     this.press.clear();
     this.heads = [];
@@ -322,27 +354,40 @@ export class Workshop {
 
   update(dt, game) {
     const A = this.anim;
+    const site = game.sites[this.site];
     A.flap = Math.max(0, A.flap - dt * 3);
     A.hand = Math.max(0, A.hand - dt * 2);
-    const N = game.numbers;
+    const N = game.siteNumbers(this.site);
     // press heads: stroke down as the press cycle completes
-    const prog = game.pressProg;
+    const prog = site.pressProg;
     this.heads.forEach((h, i) => {
       let st;
-      if (this.heads.length === 2) {
-        const local = (prog + (i === (game.pressCount % 2) ? 0 : 0.5)) % 1;
-        st = local;
-      } else st = prog;
-      const down = st > 0.75 ? Math.sin(((st - 0.75) / 0.25) * Math.PI) : 0;
+      if (this.heads.length === 2) st = (prog + (i === (site.pressCount % 2) ? 0 : 0.5)) % 1;
+      else st = prog;
+      const down = st > 0.75 && !site.pressStatus ? Math.sin(((st - 0.75) / 0.25) * Math.PI) : 0;
       const kick = A.headKick[i];
       h.head.position.y = 0.86 - down * 0.14 + kick * 0.04;
-      A.headKick[i] = Math.max(0, kick - dt * (game.owned.has('quickMold') ? 6 : 3));
+      A.headKick[i] = Math.max(0, kick - dt * (site.owned.has('quickMold') ? 6 : 3));
     });
     if (this.flywheel) this.flywheel.rotation.y += dt * 20;
-    if (this.wheel) this.wheel.rotation.z -= dt * (game.status.feeder ? 0.3 : 6 / Math.max(0.5, N.feeder)) * (game.settings.auto ? 1 : 0);
+    if (this.wheel) this.wheel.rotation.z -= dt * (site.feederStatus ? 0.3 : 6 / Math.max(0.5, N.feeder)) * (game.settings.auto && site.enabled.feeder ? 1 : 0);
     if (this.flap) this.flap.rotation.z = -A.flap * 1.1;
+    if (this.counter) {
+      this.counterT -= dt;
+      if (this.counterT <= 0) {
+        this.counterT = 0.5;
+        const g2 = this.counterCanvas.getContext('2d');
+        g2.fillStyle = '#081008'; g2.fillRect(0, 0, 256, 128);
+        g2.fillStyle = '#9dff8a'; g2.font = 'bold 20px monospace';
+        const names = ['STD', 'DRY', 'SOFT', 'SEAM', 'RAPID', 'SEL'];
+        site.madeBy.forEach((n, r) => { if (n || r === site.recipe) g2.fillText(`${names[r]} ${n}`, 8 + (r % 2) * 124, 24 + Math.floor(r / 2) * 26); });
+        const rate = 60 / (N.cycle * (site.recipe === 5 ? 1.15 : 1));
+        g2.fillStyle = '#ffcf4a'; g2.fillText(`${site.pressStatus ? '0' : rate.toFixed(0)}/min`, 8, 116);
+        this.counterTex.needsUpdate = true;
+      }
+    }
     if (this.gauge) {
-      const f = Math.max(0.02, game.hopper.length / 40);
+      const f = Math.max(0.02, site.hopper.length / 40);
       this.gauge.scale.y = f;
       this.gauge.position.y = this.gaugeY + (this.gaugeH * f) / 2;
     }
@@ -350,9 +395,9 @@ export class Workshop {
   }
 
   onEvent(e) {
-    if (e.type === 'pressed') this.anim.headKick[e.head % Math.max(1, this.heads.length)] = 1;
-    if (e.type === 'launch') this.anim.flap = 1;
-    if (e.type === 'handMade') this.anim.hand = 1;
+    if (e.type === 'pressed' && e.site === this.site) this.anim.headKick[e.head % Math.max(1, this.heads.length)] = 1;
+    if (e.type === 'launch' && e.k === this.site) this.anim.flap = 1;
+    if (e.type === 'handMade' && e.site === this.site) this.anim.hand = 1;
   }
 }
 
@@ -423,7 +468,7 @@ export class FinishStation {
   }
 
   configure(owned) {
-    const key = ['wideBasket', 'conveyor', 'timingGate'].map((k) => (owned.has(k) ? 1 : 0)).join('');
+    const key = ['wideBasket', 'conveyor', 'timingGate', 'splitTray', 'overflowCrate', 'laneMarkers', 'poweredBelt', 'twinPacking', 'stacker', 'industrialCatch'].map((k) => (owned.has(k) ? 1 : 0)).join('');
     if (key === this.config) return;
     this.config = key;
     const cr = this.creek, P = this.P;
@@ -496,6 +541,62 @@ export class FinishStation {
         const layer = Math.floor(i / (nx2 * nz2)), r = i % (nx2 * nz2);
         const v = new THREE.Vector3(-cw / 2 + 0.04 + (r % nx2) * BALL_R * 2.02 + (layer % 2) * 0.02, 0.02 + BALL_R + layer * BALL_R * 1.7, -cd / 2 + 0.04 + Math.floor(r / nx2) * BALL_R * 2.02 + (layer % 2) * 0.02);
         this.crateSlots.push(v.applyMatrix4(crate.matrixWorld));
+      }
+    }
+    // ---- expansion finish equipment
+    if (!this.finExtras) { this.finExtras = new THREE.Group(); this.group.add(this.finExtras); }
+    this.finExtras.clear();
+    this.stackSlots = [];
+    const sB = S_BASKET;
+    if (owned.has('splitTray')) {
+      // a second catch tray just past the same payout plane, on the other half of the channel
+      const t2 = new THREE.Group();
+      t2.position.copy(P(sB + len + 0.35, c, yB + 0.05)); t2.rotation.y = yaw;
+      t2.add(box(0.36, 0.02, hw * 1.6, MATS.mesh, 0, 0, 0));
+      for (const z of [-hw * 0.8, hw * 0.8]) t2.add(box(0.36, 0.12, 0.012, MATS.steel, 0, 0.06, z));
+      this.finExtras.add(t2);
+    }
+    if (owned.has('overflowCrate')) {
+      const op = P(sB + 0.4, c + hw + 1.2, 0); op.y = cr.bedH(sB + 0.4, c + hw + 1.2);
+      const oc = new THREE.Group(); oc.position.copy(op); oc.rotation.y = yaw;
+      for (let k2 = 0; k2 < 4; k2++) oc.add(box(0.6, 0.08, 0.45, MATS.darkWood, 0, 0.05 + k2 * 0.1, 0));
+      const lab = sprite(labelTexture('OVERFLOW', { w: 384, h: 96, font: 'bold 48px sans-serif', bg: '#3b2a12' }), 0.36, 0.09);
+      lab.position.set(0, 0.55, 0); oc.add(lab);
+      this.finExtras.add(oc);
+      this.overflowPos = op;
+    } else this.overflowPos = null;
+    if (owned.has('laneMarkers')) {
+      for (const side of [-1, 1]) {
+        const a = P(S_FINISH - 0.8, cr.c(S_FINISH - 0.8) + side * 0.18, cr.y0(S_FINISH) + 0.004);
+        const b = P(S_FINISH, cr.c(S_FINISH) + side * 0.18, cr.y0(S_FINISH) + 0.004);
+        this.finExtras.add(rod(a, b, 0.006, side < 0 ? MATS.orange : MATS.blue, 6));
+      }
+    }
+    if (owned.has('poweredBelt') || owned.has('twinPacking')) {
+      const a = P(sB + len * 0.5, c - hw - 0.02, yTop + 0.03), b = P(sB + 0.9, c - hw - 1.0, cr.bedH(sB + 0.9, c - hw - 1.0) + 0.38);
+      const n = 6;
+      for (let i = 0; i <= n; i++) { const q = a.clone().lerp(b, i / n); const r = cyl(0.012, 0.012, 0.12, owned.has('twinPacking') ? MATS.red : MATS.yellow, 8); r.position.copy(q); r.rotation.x = Math.PI / 2; r.rotation.y = yaw; this.finExtras.add(r); }
+      if (owned.has('twinPacking')) { const a2 = a.clone().add(new THREE.Vector3(0, 0, 0.14)), b2 = b.clone().add(new THREE.Vector3(0, 0, 0.14)); this.finExtras.add(rod(a2, b2, 0.05, MATS.rubber)); }
+    }
+    if (owned.has('industrialCatch')) {
+      const fp = P(sB + 0.2, c, cr.y0(sB) + 0.5);
+      const fr2 = new THREE.Group(); fr2.position.copy(fp); fr2.rotation.y = yaw;
+      for (const z of [-hw - 0.15, hw + 0.15]) fr2.add(box(0.05, 1.0, 0.05, MATS.yellow, 0, 0, z));
+      fr2.add(box(0.05, 0.05, hw * 2 + 0.35, MATS.yellow, 0, 0.5, 0));
+      this.finExtras.add(fr2);
+    }
+    if (owned.has('stacker')) {
+      for (let r = 0; r < 6; r++) {
+        const cp2 = P(sB + 1.6 + (r % 3) * 0.42, c + hw + 0.9 + Math.floor(r / 3) * 0.42, 0);
+        cp2.y = cr.bedH(sB + 1.6 + (r % 3) * 0.42, c + hw + 0.9 + Math.floor(r / 3) * 0.42);
+        const cg = new THREE.Group(); cg.position.copy(cp2); cg.rotation.y = yaw;
+        cg.add(box(0.36, 0.02, 0.3, MATS.wood, 0, 0.01, 0));
+        for (const [x, z, w2, d2] of [[0, 0.15, 0.36, 0.015], [0, -0.15, 0.36, 0.015], [0.18, 0, 0.015, 0.3], [-0.18, 0, 0.015, 0.3]]) cg.add(box(w2, 0.14, d2, MATS.wood, x, 0.07, z));
+        this.finExtras.add(cg);
+        cg.updateMatrixWorld(true);
+        const slots = [];
+        for (let i = 0; i < 24; i++) slots.push(new THREE.Vector3(-0.14 + (i % 5) * 0.068, 0.04 + Math.floor(i / 20) * 0.06, -0.1 + (Math.floor(i / 5) % 4) * 0.068).applyMatrix4(cg.matrixWorld));
+        this.stackSlots.push(slots);
       }
     }
     // ---- timing board
@@ -790,13 +891,14 @@ export class LaunchMarkers {
   update(game) {
     this.markers.forEach((m) => {
       const k = m.k;
-      const state = k < game.unlocked ? (k === game.sel ? 'sel' : 'open') : k === game.unlocked ? 'next' : 'locked';
+      const site = game.sites[k];
+      const state = site.open ? (k === game.sel ? 'sel' : 'open') : game.unlockable(k) ? 'next' : 'locked';
       if (state === m.state) return;
       m.state = state;
       m.flag.material.color.set(state === 'sel' ? 0xf2c230 : state === 'open' ? 0x3a8f4a : state === 'next' ? 0xff8a2a : 0x777777);
       if (m.label) m.g.remove(m.label);
       const st = STARTS[k];
-      const lines = state === 'locked' || state === 'next' ? [st.name, `Unlock $${st.cost.toLocaleString()}`] : [st.name, `$${st.base}/ball · ~${st.eta}s`];
+      const lines = state === 'locked' || state === 'next' ? [st.name, `Unlock $${st.cost.toLocaleString()}`] : [st.name, `$${st.base}/ball · ~${Math.round(st.eta)}s`];
       m.label = sprite(labelTexture(lines, { w: 640, h: 170, font: 'bold 50px Georgia, serif', bg: state === 'sel' ? '#5a4410' : '#2d3a1f' }), 1.1, 0.29);
       m.label.position.set(0, 1.4, 0);
       m.g.add(m.label);

@@ -18,7 +18,7 @@ function tex(c, { repeat = false, srgb = true, aniso = 4 } = {}) {
 }
 
 /** Tennis ball felt with the curved seam, optional blue band and batch stamp. */
-export function ballTexture({ band = false, stamp = false, size = 1024 } = {}) {
+export function ballTexture({ band = false, stamp = false, ncn = false, replica = false, size = 1024 } = {}) {
   const W = size, H = size / 2;
   const c = canvas(W, H), g = c.getContext('2d');
   const rnd = mulberry32(band ? 7 : 3);
@@ -79,7 +79,18 @@ export function ballTexture({ band = false, stamp = false, size = 1024 } = {}) {
   };
   seam(0.13, '#b6bf8e');
   seam(0.1, '#f4f2e6');
-  if (stamp) {
+  if (ncn || replica) {
+    g.save();
+    g.translate(W * 0.25, H * 0.5);
+    g.scale(1.6, 1);
+    g.fillStyle = replica ? '#5a2a8a' : '#7a1d14';
+    g.font = `bold ${Math.round(H * 0.09)}px Arial, sans-serif`;
+    g.textAlign = 'center';
+    g.fillText(replica ? 'REPLICA' : 'NCN', 0, -H * 0.01);
+    g.font = `${Math.round(H * 0.045)}px Arial, sans-serif`;
+    g.fillText(replica ? 'New Creek Nation' : 'New Creek Nation batch', 0, H * 0.06);
+    g.restore();
+  } else if (stamp) {
     g.save();
     g.translate(W * 0.25, H * 0.5);
     g.scale(1.6, 1);

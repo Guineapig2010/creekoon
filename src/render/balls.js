@@ -1,10 +1,10 @@
 // Instanced tennis balls (rolling line, hopper, basket, crate) and far-zoom markers.
 import * as THREE from 'three';
-import { BALL_R, BF } from '../core/config.js';
+import { BALL_R, BF, RECIPES } from '../core/config.js';
 import { ballTexture } from './textures.js';
 
 export function variantOf(spec) {
-  return spec & BF.STAMP ? 2 : spec & BF.PREMIUM ? 1 : 0;
+  return spec & BF.REPLICA ? 4 : spec & BF.NCN ? 3 : spec & BF.STAMP ? 2 : spec & BF.PREMIUM ? 1 : 0;
 }
 
 export class BallRenderer {
@@ -13,7 +13,7 @@ export class BallRenderer {
     const seg = quality === 'low' ? 16 : 32;
     const geo = new THREE.SphereGeometry(BALL_R, seg, Math.round(seg * 0.6));
     const size = quality === 'low' ? 512 : 1024;
-    const texs = [ballTexture({ size }), ballTexture({ band: true, size }), ballTexture({ band: true, stamp: true, size })];
+    const texs = [ballTexture({ size }), ballTexture({ band: true, size }), ballTexture({ band: true, stamp: true, size }), ballTexture({ band: true, ncn: true, size }), ballTexture({ band: true, replica: true, size })];
     this.meshes = texs.map((map) => {
       const mat = new THREE.MeshPhysicalMaterial({
         map, roughness: 0.92, metalness: 0, sheen: 1, sheenRoughness: 0.55, sheenColor: new THREE.Color(0.85, 0.95, 0.5),
@@ -29,7 +29,7 @@ export class BallRenderer {
       scene.add(m);
       return m;
     });
-    this.counts = [0, 0, 0];
+    this.counts = [0, 0, 0, 0, 0];
     this.m4 = new THREE.Matrix4();
     this.q = new THREE.Quaternion();
     this.p = new THREE.Vector3();
@@ -53,9 +53,9 @@ export class BallRenderer {
     this.ring = ring;
   }
 
-  begin() { this.counts[0] = this.counts[1] = this.counts[2] = 0; this.nMarkers = 0; }
+  begin() { this.counts.fill(0); this.nMarkers = 0; }
 
-  add(spec, x, y, z, qx, qy, qz, qw, wet = 0, marker = false) {
+  add(spec, x, y, z, qx, qy, qz, qw, wet = 0, marker = false, recipe = 0) {
     const v = variantOf(spec);
     const i = this.counts[v];
     if (i >= this.cap) return;
@@ -66,7 +66,8 @@ export class BallRenderer {
     const m = this.meshes[v];
     m.setMatrixAt(i, this.m4);
     const k = 1 - 0.5 * wet;
-    this.col.setRGB(k, k * (1 - 0.04 * wet), k * (1 - 0.1 * wet));
+    const f = (RECIPES[recipe] || RECIPES[0]).felt;
+    this.col.setRGB(k * f[0], k * f[1] * (1 - 0.04 * wet), k * f[2] * (1 - 0.1 * wet));
     m.setColorAt(i, this.col);
     if (marker && this.nMarkers < this.cap) {
       const j = this.nMarkers++ * 3;
@@ -75,7 +76,7 @@ export class BallRenderer {
   }
 
   end(markersVisible) {
-    for (let v = 0; v < 3; v++) {
+    for (let v = 0; v < this.meshes.length; v++) {
       const m = this.meshes[v];
       m.count = this.counts[v];
       m.instanceMatrix.needsUpdate = true;

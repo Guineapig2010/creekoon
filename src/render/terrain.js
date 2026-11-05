@@ -115,10 +115,41 @@ export function buildTerrain(creek, quality) {
   geo.computeVertexNormals();
   const detail = detailTexture(256, 3, 0.42);
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, map: detail, roughness: 0.92, metalness: 0 });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.receiveShadow = true;
-  mesh.name = 'terrain';
-  return mesh;
+  // split into ~10 m chunks so off-screen parts of the long creek are culled
+  const group = new THREE.Group();
+  group.name = 'terrain';
+  for (const g of splitRows(geo, nS, nD, Math.max(8, Math.round(10 / ds)))) {
+    const m = new THREE.Mesh(g, mat);
+    m.receiveShadow = true;
+    group.add(m);
+  }
+  geo.dispose();
+  return group;
+}
+
+/** Split a row-major grid geometry into chunks of rows (attributes copied, normals kept). */
+export function splitRows(geo, nRows, nCols, rowsPer) {
+  const out = [];
+  const names = Object.keys(geo.attributes);
+  for (let r0 = 0; r0 < nRows - 1; r0 += rowsPer) {
+    const r1 = Math.min(nRows - 1, r0 + rowsPer);
+    const rows = r1 - r0 + 1;
+    const g = new THREE.BufferGeometry();
+    for (const nm of names) {
+      const A = geo.attributes[nm];
+      const sz = A.itemSize;
+      g.setAttribute(nm, new THREE.BufferAttribute(A.array.slice(r0 * nCols * sz, (r1 + 1) * nCols * sz), sz));
+    }
+    const idx = [];
+    for (let i = 0; i < rows - 1; i++) for (let j = 0; j < nCols - 1; j++) {
+      const a = i * nCols + j, b = a + 1, c = a + nCols, d = c + 1;
+      idx.push(a, b, c, b, d, c);
+    }
+    g.setIndex(idx);
+    g.computeBoundingSphere();
+    out.push(g);
+  }
+  return out;
 }
 
 /** Height of the landscape at any world point (also outside the creek corridor). */
@@ -135,7 +166,7 @@ export function landHeight(creek, x, z, hint = {}) {
 
 export function buildFarTerrain(creek, quality) {
   const step = quality === 'low' ? 2 : 1.25;
-  const x0 = -90, x1 = 90, z0 = -160, z1 = 50;
+  const x0 = -90, x1 = 90, z0 = -290, z1 = 50;
   const nx = Math.round((x1 - x0) / step) + 1, nz = Math.round((z1 - z0) / step) + 1;
   const pos = new Float32Array(nx * nz * 3), col = new Float32Array(nx * nz * 3), uv = new Float32Array(nx * nz * 2);
   const inside = new Uint8Array(nx * nz);
@@ -243,7 +274,7 @@ export function buildRocks(creek) {
 export function buildVegetation(creek, quality) {
   const group = new THREE.Group();
   const rnd = mulberry32(5150);
-  const nTrees = quality === 'low' ? 160 : 320;
+  const nTrees = quality === 'low' ? 220 : 480;
   const trunks = [], cones = [], crowns = [];
   const keepClear = (L) => {
     for (const st of STARTS) if (Math.abs(L.s - st.s) < 2.5 && L.d > creek.c(st.s)) return true;
@@ -252,9 +283,9 @@ export function buildVegetation(creek, quality) {
   };
   let guard = 0;
   while (trunks.length < nTrees && guard++ < 20000) {
-    const x = -80 + rnd() * 160, z = -155 + rnd() * 200;
+    const x = -80 + rnd() * 160, z = -285 + rnd() * 330;
     const L = landHeight(creek, x, z);
-    if (L.ad < 4.2 || keepClear(L)) continue;
+    if (L.ad < 9.5 || keepClear(L)) continue;
     if (L.ad < 9 && rnd() < 0.5) continue;
     const conifer = rnd() < 0.55;
     const hgt = (conifer ? 7 : 5) + rnd() * 6;

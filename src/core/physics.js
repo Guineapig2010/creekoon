@@ -32,7 +32,7 @@ export function makeBall(id, spec, seed) {
     speedAvg: 1, stallT: 0, age: 0,
     wob: 0, airT: 0, lastSplash: -1,
     // game fields filled by Game
-    start: 0, payout: 0, cps: [], cpi: 0, state: 'roll', paid: false, maxS: 0,
+    start: 0, site: 0, recipe: 0, payout: 0, cps: [], cpi: 0, state: 'roll', paid: false, maxS: 0,
   };
 }
 
@@ -41,7 +41,9 @@ export class PhysicsWorld {
     this.creek = creek;
     this.balls = [];
     this.t = 0;
-    this.disabled = new Set(['rootRail', 'splashGuard', 'poolGuide', 'catchRamp', 'spillRail', 'alderBypass', 'landingBoards', 'debrisScreen']);
+    this.disabled = new Set(['rootRail', 'splashGuard', 'poolGuide', 'catchRamp', 'spillRail', 'alderBypass', 'landingBoards', 'debrisScreen',
+      'willowShield', 'willowFlare', 'slateBumpers', 'leafGrate', 'gateDirect', 'gateCalm', 'splitMergeRail', 'basinBoom', 'spillApron',
+      'sluiceToRight', 'sluiceToLeft', 'headGuide', 'headRails', 'habitatBypass']);
     this.extra = []; // chute colliders + dynamic (logs, arm)
     this.matOn = false;
     this.events = [];
@@ -50,7 +52,7 @@ export class PhysicsWorld {
     this.flowTmp = {};
     this.windTmp = {};
     this.hash = new Map();
-    this.wobbleAmp = (b) => (b.spec & BF.CORES ? 0.08 : 0.32);
+    this.wobbleAmp = (b) => (b.spec & BF.CORES ? 0.08 : 0.32) * (b.recipe === 3 ? 0.35 : b.recipe === 5 ? 0.7 : 1) * (b.gauged ? 0.6 : 1);
   }
 
   setGroup(group, enabled) {
@@ -103,7 +105,9 @@ export class PhysicsWorld {
       // projected submerged area (circular segment)
       const rr = BALL_R, hh = Math.min(sub, 2 * rr - 1e-6);
       const A = rr * rr * Math.acos((rr - hh) / rr) - (rr - hh) * Math.sqrt(Math.max(0, 2 * rr * hh - hh * hh));
-      const k = (0.5 * RHO_W * CD_W * A) / mEff;
+      // Rapids Felt: its rough finish drags more in slow, calm pools
+      const cdx = b.recipe === 4 && Math.hypot(fl.vx, fl.vz) < 0.45 ? 1.25 : 1;
+      const k = (0.5 * RHO_W * CD_W * cdx * A) / mEff;
       let rx = b.vx - fl.vx, ry = b.vy - fl.vy, rz = b.vz - fl.vz;
       const rm = Math.hypot(rx, ry, rz);
       const f = 1 / (1 + k * rm * dt);
@@ -120,7 +124,7 @@ export class PhysicsWorld {
         const a = 1 - Math.exp(-2 * frac * dt);
         b.wx += (tgx - b.wx) * a; b.wz += (tgz - b.wz) * a;
       }
-      b.wet = Math.min(1, b.wet + dt * frac * (b.spec & BF.WATER ? 0.08 : 0.32));
+      b.wet = Math.min(1, b.wet + dt * frac * (b.spec & BF.WATER ? 0.08 : 0.32) * (b.recipe === 1 ? 0.45 : 1));
       b.airT = 0;
     } else {
       // air drag relative to the wind (Folk Draft at the Shelf)
@@ -273,6 +277,7 @@ export class PhysicsWorld {
         const spread = b.spec & BF.REINFORCED ? 0.03 : 0.13;
         let eb = 0.76;
         if (hard) eb += spread * (ballRand(b) * 2 - 1);
+        if (hard && b.recipe === 2) eb *= 0.82; // Soft-Core soaks up hard bounces
         e = Math.min(0.92, Math.sqrt(eb * S.e / 0.72) * 0.86) * (1 - 0.35 * b.wet);
         if (b.sub > BALL_R) e *= 0.35;
         if (imp > 0.5) this.events.push({ type: 'hit', mat, v: imp, x: b.x, y: b.y, z: b.z, id: b.id });
@@ -308,7 +313,10 @@ export class PhysicsWorld {
     if (tm > 1e-6) {
       tx /= tm; ty /= tm; tz /= tm;
       const need = (tm * mass) / (1 + 1 / KI);
-      const jt = Math.min(need, S.mu * jf);
+      let mu = S.mu;
+      if (b.recipe === 1 && mat === MAT.WOOD && b.sub <= 0) mu *= 0.85; // Dry-Weave: less grip on dry wood
+      if (b.recipe === 4 && mat === MAT.ROCK && b.wet > 0.25) mu *= 1.25; // Rapids Felt: traction on wet rock
+      const jt = Math.min(need, mu * jf);
       b.vx -= (tx * jt) / mass; b.vy -= (ty * jt) / mass; b.vz -= (tz * jt) / mass;
       const I = KI * mass * r * r;
       const k = (r * jt) / I;
@@ -327,6 +335,7 @@ export class PhysicsWorld {
         if (b.s > this.creek.roughPatch.s0 && b.s < this.creek.roughPatch.s1) crr *= 2.5;
       }
       crr *= 1 + 0.6 * b.wet;
+      if (b.recipe === 2 && b.sub < BALL_R * 0.5) crr *= 1.2; // Soft-Core rolls slower through shallow dry stretches
       const vtx = b.vx - (b.vx * nx + b.vy * ny + b.vz * nz) * nx;
       const vty = b.vy - (b.vx * nx + b.vy * ny + b.vz * nz) * ny;
       const vtz = b.vz - (b.vx * nx + b.vy * ny + b.vz * nz) * nz;

@@ -2,6 +2,67 @@
 import * as THREE from 'three';
 import { S_MIN, S_MAX, STEPS } from '../core/creek.js';
 import { waterNormalTexture, streakTexture, foamTexture } from './textures.js';
+import { splitRows } from './terrain.js';
+
+function extraWaterGeos(creek) {
+  const geos = [];
+  const fl = {}, fr = {}, p = {};
+  // alternate cascade route
+  {
+    const a = creek.alt, nU = 8, ds = 0.06;
+    const pos = [], depth = [], flow = [], foam = [], idx = [];
+    let rows = 0;
+    for (let s = a.s0 + 0.3; s <= a.s1 - 0.1; s += ds) {
+      const ad = creek.altD(s), y = creek.altY(s);
+      creek.frame(s, fr);
+      const yn = creek.altY(s + 0.08);
+      for (let j = 0; j < nU; j++) {
+        const u = -1.05 + (2.1 * j) / (nU - 1);
+        const d = ad + u * a.w;
+        creek.worldXZ(s, d, p);
+        pos.push(p.x, y + 0.003, p.z);
+        depth.push(Math.max(0, y - creek.bedH(s, d)));
+        creek.flowAt(s, d, y, 0, fr.tx, fr.tz, fl);
+        flow.push(fl.vx, fl.vz);
+        foam.push(Math.min(1, Math.max(0.15, (y - yn) * 9)));
+      }
+      rows++;
+    }
+    for (let i = 0; i < rows - 1; i++) for (let j = 0; j < nU - 1; j++) { const q = i * nU + j; idx.push(q, q + 1, q + nU, q + 1, q + nU + 1, q + nU); }
+    geos.push(makeWaterGeo(pos, depth, flow, foam, idx));
+  }
+  // double ponds (still water, a ring of vertices)
+  for (const pd of creek.ponds) {
+    const pos = [], depth = [], flow = [], foam = [], idx = [];
+    const lvl = creek.y0(pd.s) + pd.lift, c = creek.c(pd.s) + pd.dOff;
+    const ring = 20, rings = 5;
+    for (let r = 0; r <= rings; r++) for (let k = 0; k < ring; k++) {
+      const rr = (r / rings) * 1.04, a2 = (k / ring) * Math.PI * 2;
+      const s = pd.s + Math.cos(a2) * pd.rs * rr, d = c + Math.sin(a2) * pd.rd * rr;
+      creek.worldXZ(s, d, p);
+      pos.push(p.x, lvl + 0.003, p.z);
+      depth.push(Math.max(0, lvl - creek.bedH(s, d)));
+      flow.push(0.02, 0.01); foam.push(0.02);
+    }
+    for (let r = 0; r < rings; r++) for (let k = 0; k < ring; k++) {
+      const a3 = r * ring + k, b = r * ring + ((k + 1) % ring), c3 = a3 + ring, d3 = b + ring;
+      idx.push(a3, c3, b, b, c3, d3);
+    }
+    geos.push(makeWaterGeo(pos, depth, flow, foam, idx));
+  }
+  return geos;
+}
+
+function makeWaterGeo(pos, depth, flow, foam, idx) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('aDepth', new THREE.Float32BufferAttribute(depth, 1));
+  g.setAttribute('aFlow', new THREE.Float32BufferAttribute(flow, 2));
+  g.setAttribute('aFoam', new THREE.Float32BufferAttribute(foam, 1));
+  g.setIndex(idx);
+  g.computeBoundingSphere();
+  return g;
+}
 
 const waterVert = /* glsl */`
   attribute float aDepth;
@@ -160,8 +221,11 @@ export function buildWater(creek, quality, sunDir) {
   const mat = new THREE.ShaderMaterial({
     vertexShader: waterVert, fragmentShader: waterFrag, uniforms, transparent: true, depthWrite: false, fog: true,
   });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.renderOrder = 2;
+  const mesh = new THREE.Group();
+  mesh.material = mat;
+  for (const g of splitRows(geo, nS, nU, Math.round(10 / ds))) { const m = new THREE.Mesh(g, mat); m.renderOrder = 2; mesh.add(m); }
+  // the alternate route at the waterfall split, the Springs double ponds and their runoff
+  for (const g of extraWaterGeos(creek)) { const m = new THREE.Mesh(g, mat); m.renderOrder = 2; mesh.add(m); }
   mesh.name = 'water';
   return mesh;
 }

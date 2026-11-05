@@ -1,0 +1,979 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "springs",
+        "name": "Crawfish Springs",
+        "note": "Secondary runoff chute with a large double-pond spring and crawfish. The red outline marks the Springs and the area you described as the main concentration of Code Rot. Reach the Springs by climbing the Continental Shelf from the brushy approach in the red-circled ground photo. The mapped outline shows the area. The exact climb line, chute entrance, and individual pond edges still need field marks.",
+        "stroke": "#d12e39",
+        "source": "Close annotated aerial view",
+        "accuracy": "Approximate screenshot trace"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -117.6258648,
+              33.6124265
+            ],
+            [
+              -117.6256886,
+              33.6125237
+            ],
+            [
+              -117.6255071,
+              33.6126012
+            ],
+            [
+              -117.62532,
+              33.6126711
+            ],
+            [
+              -117.6251208,
+              33.6127053
+            ],
+            [
+              -117.6249259,
+              33.6126955
+            ],
+            [
+              -117.6246906,
+              33.6126699
+            ],
+            [
+              -117.6244826,
+              33.6126108
+            ],
+            [
+              -117.624326,
+              33.6125346
+            ],
+            [
+              -117.6242451,
+              33.6124627
+            ],
+            [
+              -117.6241929,
+              33.6123561
+            ],
+            [
+              -117.6241948,
+              33.6122423
+            ],
+            [
+              -117.6242424,
+              33.6121088
+            ],
+            [
+              -117.6243107,
+              33.6119685
+            ],
+            [
+              -117.6244095,
+              33.6118277
+            ],
+            [
+              -117.6245421,
+              33.6116792
+            ],
+            [
+              -117.6246918,
+              33.6115434
+            ],
+            [
+              -117.6248072,
+              33.6114826
+            ],
+            [
+              -117.6249432,
+              33.6114677
+            ],
+            [
+              -117.6251412,
+              33.6114727
+            ],
+            [
+              -117.6253457,
+              33.6115035
+            ],
+            [
+              -117.625513,
+              33.6115592
+            ],
+            [
+              -117.6256725,
+              33.6116355
+            ],
+            [
+              -117.6258028,
+              33.6116633
+            ],
+            [
+              -117.6259467,
+              33.6117734
+            ],
+            [
+              -117.6260913,
+              33.6119094
+            ],
+            [
+              -117.6261479,
+              33.6120149
+            ],
+            [
+              -117.6261299,
+              33.612132
+            ],
+            [
+              -117.6260579,
+              33.6122514
+            ],
+            [
+              -117.6259767,
+              33.6123375
+            ],
+            [
+              -117.6258648,
+              33.6124265
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "farlands",
+        "name": "Farlands entrance",
+        "note": "This line marks the approximate entrance beyond the Clearing and the end of the Shelf. The Farlands continue upstream past the mapped inset, with no outer boundary shown. Only one or two expeditions have gone in.",
+        "stroke": "#b98100",
+        "source": "Approximate entry line traced from the yellow mark",
+        "accuracy": "Approximate screenshot trace"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -117.6259617,
+            33.6189412
+          ],
+          [
+            -117.6255667,
+            33.6189527
+          ],
+          [
+            -117.6251623,
+            33.6189088
+          ],
+          [
+            -117.6248196,
+            33.6188808
+          ],
+          [
+            -117.6244009,
+            33.6188131
+          ],
+          [
+            -117.6239965,
+            33.6187771
+          ],
+          [
+            -117.6234872,
+            33.6188044
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "shelf-end",
+        "name": "Continental Shelf · final stretch",
+        "note": "The final stretch of the Continental Shelf before the creek returns to its normal character.",
+        "stroke": "#802c43",
+        "source": "Farlands annotated aerial view",
+        "accuracy": "Approximate screenshot trace"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -117.6249267,
+              33.6168796
+            ],
+            [
+              -117.6247788,
+              33.617141
+            ],
+            [
+              -117.624588,
+              33.6175491
+            ],
+            [
+              -117.6244354,
+              33.6178303
+            ],
+            [
+              -117.6242922,
+              33.618175
+            ],
+            [
+              -117.6240635,
+              33.6184641
+            ],
+            [
+              -117.6238538,
+              33.6187413
+            ],
+            [
+              -117.6237634,
+              33.6186739
+            ],
+            [
+              -117.6238875,
+              33.6183371
+            ],
+            [
+              -117.6240165,
+              33.6179608
+            ],
+            [
+              -117.6242453,
+              33.6175963
+            ],
+            [
+              -117.6245264,
+              33.6172993
+            ],
+            [
+              -117.6247409,
+              33.6170538
+            ],
+            [
+              -117.6249267,
+              33.6168796
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "clearing",
+        "name": "The Clearing · Nigatron’s deep pools",
+        "note": "The Clearing and its deep pools. Nigatron, a large water bug, was found here while creek-race balls were being carried upstream. In the open-sky ground photo, the Shelf is on the wooded right side and the opposite edge is grassy, in the direction the camera is looking.",
+        "stroke": "#ce3342",
+        "source": "Farlands annotated aerial view",
+        "accuracy": "Approximate screenshot trace"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -117.6251202,
+              33.6182192
+            ],
+            [
+              -117.6249964,
+              33.6183341
+            ],
+            [
+              -117.6247821,
+              33.6184052
+            ],
+            [
+              -117.6245775,
+              33.6183813
+            ],
+            [
+              -117.6244682,
+              33.618294
+            ],
+            [
+              -117.6244208,
+              33.6180998
+            ],
+            [
+              -117.6244734,
+              33.6179056
+            ],
+            [
+              -117.6246401,
+              33.6177552
+            ],
+            [
+              -117.6248306,
+              33.6176523
+            ],
+            [
+              -117.6249877,
+              33.6176366
+            ],
+            [
+              -117.6250827,
+              33.6177397
+            ],
+            [
+              -117.6251158,
+              33.6179101
+            ],
+            [
+              -117.6251202,
+              33.6182192
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "shelf",
+        "name": "Continental Shelf",
+        "note": "The Continental Shelf is on the Crawfish Springs side of the creek. Purple shows the marked final stretch and the estimated connection along the wooded bank. The dashed connection is approximate. The red-circled ground photo shows the brushy climb toward the Springs.",
+        "stroke": "#7440a4",
+        "source": "Label near the creator’s mapped final Shelf area on IMG_8217",
+        "accuracy": "Approximate area label."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.6241069,
+          33.6179688
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "shelf-line",
+        "name": "Continental Shelf · estimated bank trace",
+        "note": "Approximate line on the wooded, Crawfish Springs side of the creek. The dashed stretch connects to the user-marked final section.",
+        "stroke": "#7440a4",
+        "source": "Bank-side estimate from the aerial imagery and field description.",
+        "accuracy": "Estimated bank trace."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -117.62476,
+            33.61258
+          ],
+          [
+            -117.6247695,
+            33.6126495
+          ],
+          [
+            -117.6247797,
+            33.6127189
+          ],
+          [
+            -117.6247905,
+            33.6127884
+          ],
+          [
+            -117.624802,
+            33.6128578
+          ],
+          [
+            -117.6248141,
+            33.6129273
+          ],
+          [
+            -117.624827,
+            33.6129967
+          ],
+          [
+            -117.6248413,
+            33.6130662
+          ],
+          [
+            -117.6248568,
+            33.6131356
+          ],
+          [
+            -117.6248733,
+            33.6132051
+          ],
+          [
+            -117.6248902,
+            33.6132745
+          ],
+          [
+            -117.6249073,
+            33.613344
+          ],
+          [
+            -117.6249242,
+            33.6134134
+          ],
+          [
+            -117.6249406,
+            33.6134829
+          ],
+          [
+            -117.6249561,
+            33.6135523
+          ],
+          [
+            -117.6249703,
+            33.6136218
+          ],
+          [
+            -117.6249853,
+            33.6136912
+          ],
+          [
+            -117.6250015,
+            33.6137607
+          ],
+          [
+            -117.6250169,
+            33.6138301
+          ],
+          [
+            -117.6250297,
+            33.6138996
+          ],
+          [
+            -117.625038,
+            33.613969
+          ],
+          [
+            -117.6250398,
+            33.6140385
+          ],
+          [
+            -117.6250349,
+            33.6141079
+          ],
+          [
+            -117.6250247,
+            33.6141774
+          ],
+          [
+            -117.6250102,
+            33.6142468
+          ],
+          [
+            -117.6249926,
+            33.6143163
+          ],
+          [
+            -117.624973,
+            33.6143858
+          ],
+          [
+            -117.6249517,
+            33.6144552
+          ],
+          [
+            -117.6249207,
+            33.6145247
+          ],
+          [
+            -117.62488,
+            33.6145941
+          ],
+          [
+            -117.6248324,
+            33.6146636
+          ],
+          [
+            -117.6247808,
+            33.614733
+          ],
+          [
+            -117.6247279,
+            33.6148025
+          ],
+          [
+            -117.6246765,
+            33.6148719
+          ],
+          [
+            -117.6246287,
+            33.6149414
+          ],
+          [
+            -117.6245809,
+            33.6150108
+          ],
+          [
+            -117.6245323,
+            33.6150803
+          ],
+          [
+            -117.6244831,
+            33.6151497
+          ],
+          [
+            -117.6244335,
+            33.6152192
+          ],
+          [
+            -117.6243835,
+            33.6152886
+          ],
+          [
+            -117.6243334,
+            33.6153581
+          ],
+          [
+            -117.6242833,
+            33.6154275
+          ],
+          [
+            -117.6242313,
+            33.615497
+          ],
+          [
+            -117.6241689,
+            33.6155664
+          ],
+          [
+            -117.6241019,
+            33.6156359
+          ],
+          [
+            -117.624038,
+            33.6157053
+          ],
+          [
+            -117.6239847,
+            33.6157748
+          ],
+          [
+            -117.6239497,
+            33.6158442
+          ],
+          [
+            -117.6239401,
+            33.6159137
+          ],
+          [
+            -117.6239423,
+            33.6159832
+          ],
+          [
+            -117.6239476,
+            33.6160526
+          ],
+          [
+            -117.6239554,
+            33.6161221
+          ],
+          [
+            -117.6239653,
+            33.6161915
+          ],
+          [
+            -117.623977,
+            33.616261
+          ],
+          [
+            -117.6239901,
+            33.6163304
+          ],
+          [
+            -117.6240046,
+            33.6163999
+          ],
+          [
+            -117.6240291,
+            33.6164693
+          ],
+          [
+            -117.6240637,
+            33.6165388
+          ],
+          [
+            -117.6241049,
+            33.6166082
+          ],
+          [
+            -117.6241492,
+            33.6166777
+          ],
+          [
+            -117.6241931,
+            33.6167471
+          ],
+          [
+            -117.624233,
+            33.6168166
+          ],
+          [
+            -117.6242715,
+            33.616886
+          ],
+          [
+            -117.6243157,
+            33.6169555
+          ],
+          [
+            -117.6243598,
+            33.6170249
+          ],
+          [
+            -117.6243975,
+            33.6170944
+          ],
+          [
+            -117.6244228,
+            33.6171638
+          ],
+          [
+            -117.62443,
+            33.6172333
+          ],
+          [
+            -117.6244296,
+            33.6173027
+          ],
+          [
+            -117.6244274,
+            33.6173722
+          ],
+          [
+            -117.6244221,
+            33.6174416
+          ],
+          [
+            -117.6244121,
+            33.6175111
+          ],
+          [
+            -117.6243961,
+            33.6175805
+          ],
+          [
+            -117.6243724,
+            33.61765
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "shelf-end-line",
+        "name": "Continental Shelf · marked final stretch",
+        "note": "The solid segment follows the middle of the final Shelf stretch marked in the close-up. Its exact edges remain approximate.",
+        "stroke": "#7440a4",
+        "source": "Center of the marked terminal area in IMG_8217.",
+        "accuracy": "Traced from the marked aerial view."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -117.6243724,
+            33.61765
+          ],
+          [
+            -117.6243471,
+            33.6176933
+          ],
+          [
+            -117.6243217,
+            33.6177367
+          ],
+          [
+            -117.6242963,
+            33.61778
+          ],
+          [
+            -117.624271,
+            33.6178233
+          ],
+          [
+            -117.6242479,
+            33.6178667
+          ],
+          [
+            -117.6242253,
+            33.61791
+          ],
+          [
+            -117.6242027,
+            33.6179533
+          ],
+          [
+            -117.6241852,
+            33.6179967
+          ],
+          [
+            -117.6241688,
+            33.61804
+          ],
+          [
+            -117.6241524,
+            33.6180833
+          ],
+          [
+            -117.624136,
+            33.6181267
+          ],
+          [
+            -117.6241195,
+            33.61817
+          ],
+          [
+            -117.6240959,
+            33.6182133
+          ],
+          [
+            -117.6240713,
+            33.6182567
+          ],
+          [
+            -117.6240468,
+            33.6183
+          ],
+          [
+            -117.6240221,
+            33.6183433
+          ],
+          [
+            -117.623997,
+            33.6183867
+          ],
+          [
+            -117.6239719,
+            33.61843
+          ],
+          [
+            -117.6239469,
+            33.6184733
+          ],
+          [
+            -117.6239225,
+            33.6185167
+          ],
+          [
+            -117.6238982,
+            33.61856
+          ],
+          [
+            -117.6238738,
+            33.6186033
+          ],
+          [
+            -117.6238494,
+            33.6186467
+          ],
+          [
+            -117.6238388,
+            33.61869
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "waterfall-split",
+        "name": "Route split · approximate",
+        "note": "The route split is about 20 feet downstream from the taped sign near pin C. The waterfall is farther down the primary branch.",
+        "stroke": "#67472d",
+        "source": "Field estimate of about 20 ft downstream of taped sign",
+        "accuracy": "Approximate split. Pin C is the nearby photo viewpoint."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.625794,
+          33.6125753
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "waterfall",
+        "name": "Waterfall · estimated location",
+        "note": "The falls are at the red squiggles in IMG_8218. The wider-map pin is an estimate from the red mark, using the taped-sign viewpoint and the roughly 20-foot sign-to-split distance as anchors.",
+        "stroke": "#b02d3e",
+        "source": "Red mark in IMG_8218 scaled using the sign-to-split estimate",
+        "accuracy": "Estimated from the screenshot and sign-to-split spacing."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.6261649,
+          33.6120564
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "flat-rocks",
+        "name": "Flat Rocks · usual start",
+        "note": "The usual Creek Rolling launch by the big flat rocks. In the tycoon it is one permanent factory site among several.",
+        "stroke": "#1d6a9c",
+        "source": "Flat Rocks annotated aerial view",
+        "accuracy": "Approximate screenshot trace"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -117.6257871,
+              33.6170898
+            ],
+            [
+              -117.6257175,
+              33.6172292
+            ],
+            [
+              -117.6255696,
+              33.6173516
+            ],
+            [
+              -117.6254134,
+              33.6174123
+            ],
+            [
+              -117.6252503,
+              33.6174365
+            ],
+            [
+              -117.6250994,
+              33.6174013
+            ],
+            [
+              -117.6249703,
+              33.617301
+            ],
+            [
+              -117.6249111,
+              33.6171595
+            ],
+            [
+              -117.6249395,
+              33.6169916
+            ],
+            [
+              -117.6250462,
+              33.6168533
+            ],
+            [
+              -117.62519,
+              33.6167812
+            ],
+            [
+              -117.6253832,
+              33.6167227
+            ],
+            [
+              -117.62553,
+              33.6167579
+            ],
+            [
+              -117.6256591,
+              33.6168399
+            ],
+            [
+              -117.6257457,
+              33.6169448
+            ],
+            [
+              -117.6257871,
+              33.6170898
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "springs-approach-view",
+        "name": "Shelf climb view",
+        "note": "IMG_8183(1).jpeg matches the photo pin shown in both aerial views. This is the camera location across from the red-circled opening. The climb itself remains unpinned.",
+        "stroke": "#075c60",
+        "source": "Exact thumbnail match in IMG_8215 and IMG_8216",
+        "accuracy": "Approximate camera pin matched to an aerial screenshot.",
+        "group": "photo",
+        "code": "A"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.6266626,
+          33.6109625
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "clearing-photo",
+        "name": "Deep pools scene",
+        "note": "IMG_8217 contains a different photo of the deep-pool scene shown in IMG_5686(1).jpeg. This pin locates the aerial thumbnail’s camera. The supplied photo’s exact camera position is unknown.",
+        "stroke": "#075c60",
+        "source": "Same scene. Different photo.",
+        "accuracy": "Aerial thumbnail camera pin. Scene reference only for IMG_5686(1).jpeg.",
+        "group": "photo",
+        "code": "B"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.6247683,
+          33.6180168
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "waterfall-sign-photo",
+        "name": "Taped sign view",
+        "note": "IMG_5946.jpeg matches the thumbnail in IMG_8218. The taped sign is about 20 feet upstream of the route split. This pin shows the nearby photo viewpoint.",
+        "stroke": "#075c60",
+        "source": "Exact thumbnail match in IMG_8218",
+        "accuracy": "Approximate camera pin matched to an aerial screenshot.",
+        "group": "photo",
+        "code": "C"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.6257453,
+          33.6126121
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "flat-rocks-photo",
+        "name": "Flat rock slab view",
+        "note": "IMG_5942.jpeg matches the thumbnail in IMG_8220. This is the camera location near the usual start. The blue start outline marks the launch area separately.",
+        "stroke": "#075c60",
+        "source": "Exact thumbnail match in IMG_8220",
+        "accuracy": "Approximate camera pin matched to an aerial screenshot.",
+        "group": "photo",
+        "code": "D"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -117.6250509,
+          33.6164731
+        ]
+      }
+    }
+  ]
+}

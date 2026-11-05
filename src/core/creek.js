@@ -7,7 +7,7 @@
 import { fbm, vnoise, clamp, lerp, smoothstep, mulberry32 } from './noise.js';
 import { STARTS, S_FINISH, S_BASKET, BALL_R } from './config.js';
 
-export const S_MIN = -5;
+export const S_MIN = -152;
 export const S_MAX = 108;
 export const D_MIN = -10;
 export const D_MAX = 10;
@@ -33,7 +33,54 @@ const G = MAT.GRAVEL, R = MAT.ROCK, S = MAT.SAND, D = MAT.DIRT;
 // Channel key frames:
 // s, wL, wR, depth, centre offset c, surface speed U, bankL, bankR, bankW, roughness, turbulence, bedMat, bankMat
 const K = [
-  [-5, 0.36, 0.36, 0.11, 0, 1.2, 1.3, 1.3, 0.45, 0.03, 0.08, R, R],
+  // ---- New Creek Nation headwaters (game-only reaches, upstream of the Upper Gorge)
+  // Cold Spring Headwaters: calm spring pool narrowing into a steep outflow
+  [-152, 0.9, 0.9, 0.5, 0, 0.54, 0.5, 0.5, 1.2, 0.01, 0.05, S, D],
+  [-146, 1.15, 1.15, 0.62, 0.25, 0.54, 0.5, 0.55, 1.2, 0.01, 0.05, S, D],
+  [-140.5, 0.85, 0.85, 0.42, 0, 0.76, 0.6, 0.6, 1.0, 0.01, 0.07, S, D],
+  [-138.0, 0.26, 0.26, 0.13, 0, 1.59, 0.8, 0.8, 0.5, 0.02, 0.16, R, R],
+  [-129.5, 0.26, 0.26, 0.12, 0.2, 1.98, 0.9, 0.9, 0.5, 0.025, 0.24, R, R],
+  // Boulder Sluice: staggered rocks, two lanes around a rock rib, gravel-bar merge
+  [-126, 0.4, 0.4, 0.15, 0, 1.76, 0.7, 0.7, 0.6, 0.03, 0.16, R, R],
+  [-121.5, 0.72, 0.72, 0.15, 0, 1.62, 0.7, 0.7, 0.6, 0.03, 0.18, R, R],
+  [-111.0, 0.72, 0.72, 0.15, 0, 1.62, 0.6, 0.6, 0.6, 0.03, 0.18, R, R],
+  [-108.6, 0.62, 0.62, 0.1, 0, 1.23, 0.4, 0.4, 0.8, 0.015, 0.1, G, D],
+  [-105.5, 0.42, 0.42, 0.15, 0, 1.62, 0.5, 0.5, 0.7, 0.02, 0.12, G, D],
+  // Spillway Falls: approach, a 3.2 m fall onto a rock apron and a deep pool
+  [-102, 0.36, 0.36, 0.14, 0, 1.57, 0.8, 0.8, 0.5, 0.025, 0.14, R, R],
+  [-91.1, 0.3, 0.3, 0.12, 0, 2.18, 1.0, 1.0, 0.45, 0.02, 0.14, R, R],
+  [-90.88, 0.7, 0.7, 1.0, 0, 0.69, 1.4, 1.4, 0.45, 0.02, 0.3, S, R],
+  [-87.6, 0.66, 0.66, 0.6, 0, 0.87, 1.0, 1.0, 0.5, 0.015, 0.2, S, R],
+  [-85.2, 0.4, 0.4, 0.15, 0, 1.46, 0.6, 0.6, 0.7, 0.02, 0.12, G, D],
+  // Long Eddy Basin: a wide bend, recirculation on the inside, a fast tongue on the outside
+  [-78, 0.42, 0.42, 0.16, 0, 1.76, 0.5, 0.5, 0.8, 0.015, 0.1, G, D],
+  [-73, 1.0, 0.85, 0.36, 0.55, 1.23, 0.45, 0.6, 0.9, 0.012, 0.12, S, D],
+  [-67.5, 1.25, 0.95, 0.42, 0.85, 1.10, 0.45, 0.65, 0.9, 0.012, 0.12, S, D],
+  [-62.5, 0.62, 0.6, 0.25, 0.3, 1.49, 0.45, 0.5, 0.9, 0.012, 0.1, G, D],
+  // Splitstone Fork: a direct rocky lane (right) and a longer calm lane (left)
+  [-56, 0.42, 0.42, 0.15, 0, 2.10, 0.5, 0.5, 0.8, 0.02, 0.12, R, D],
+  [-51.5, 0.8, 0.72, 0.16, -0.15, 1.96, 0.5, 0.5, 0.8, 0.025, 0.14, R, D],
+  [-46.5, 1.55, 0.72, 0.18, -0.4, 1.81, 0.5, 0.6, 0.8, 0.025, 0.14, R, D],
+  [-41.8, 0.95, 0.7, 0.16, -0.2, 1.96, 0.5, 0.5, 0.8, 0.02, 0.12, R, D],
+  [-38.6, 0.42, 0.42, 0.15, 0, 2.10, 0.5, 0.5, 0.8, 0.02, 0.1, G, D],
+  // Willow Narrows: a fast pinch between roots, an exit pool where balls bunch
+  [-34, 0.45, 0.45, 0.16, 0, 1.45, 0.5, 0.5, 0.8, 0.015, 0.1, G, D],
+  [-27.2, 0.3, 0.3, 0.15, 0, 1.55, 0.6, 0.6, 0.6, 0.02, 0.15, G, D],
+  [-25.4, 0.15, 0.15, 0.14, 0, 1.65, 0.6, 0.6, 0.5, 0.02, 0.2, R, D],
+  [-23.4, 0.15, 0.15, 0.14, 0, 1.65, 0.6, 0.6, 0.5, 0.02, 0.2, R, D],
+  [-22.5, 0.62, 0.62, 0.3, 0, 0.7, 0.5, 0.5, 0.8, 0.015, 0.12, S, D],
+  [-19.6, 0.4, 0.4, 0.15, 0, 1.35, 0.5, 0.5, 0.8, 0.015, 0.1, G, D],
+  // Slate Steps: three slabs with shallow pocket pools below each
+  [-16, 0.5, 0.5, 0.12, 0, 1.32, 0.7, 0.7, 0.6, 0.015, 0.1, R, R],
+  [-12.62, 0.55, 0.55, 0.07, 0, 1.57, 0.7, 0.7, 0.6, 0.012, 0.1, R, R],
+  [-12.38, 0.6, 0.6, 0.3, 0, 0.68, 0.5, 0.5, 0.6, 0.015, 0.22, S, R],
+  [-11.0, 0.5, 0.5, 0.1, 0, 1.36, 0.6, 0.6, 0.6, 0.012, 0.1, R, R],
+  [-9.12, 0.5, 0.5, 0.07, 0, 1.57, 0.6, 0.6, 0.6, 0.012, 0.1, R, R],
+  [-8.88, 0.66, 0.66, 0.32, 0, 0.53, 0.5, 0.5, 0.6, 0.015, 0.2, S, R],
+  [-7.2, 0.5, 0.5, 0.1, 0, 1.36, 0.6, 0.6, 0.6, 0.012, 0.1, R, R],
+  [-5.72, 0.5, 0.5, 0.07, 0, 1.57, 0.6, 0.6, 0.6, 0.012, 0.1, R, R],
+  [-5.48, 0.55, 0.55, 0.28, 0, 0.72, 0.6, 0.6, 0.6, 0.015, 0.2, S, R],
+  [-3.2, 0.38, 0.38, 0.12, 0, 1.3, 1.2, 1.2, 0.45, 0.03, 0.1, R, R],
   [0, 0.34, 0.34, 0.11, 0, 1.35, 1.25, 1.25, 0.45, 0.03, 0.1, R, R],
   [8.9, 0.28, 0.28, 0.09, 0, 1.7, 1.2, 1.2, 0.45, 0.025, 0.12, R, R],
   [9.1, 0.5, 0.5, 0.36, 0, 0.9, 1.0, 0.22, 0.12, 0.02, 0.25, R, R],
@@ -53,8 +100,11 @@ const K = [
   [45.6, 0.78, 1.05, 0.18, -0.1, 1.73, 0.4, 0.42, 0.9, 0.012, 0.08, G, D],
   [46.7, 0.8, 1.3, 0.18, -0.1, 1.64, 0.42, 0.42, 0.9, 0.012, 0.08, G, D],
   [48.0, 0.75, 1.0, 0.18, -0.2, 1.77, 0.42, 0.42, 0.9, 0.012, 0.08, G, D],
-  [50.2, 0.48, 0.48, 0.2, -0.3, 2.00, 0.42, 0.42, 0.9, 0.012, 0.08, G, D],
-  [53.0, 0.45, 0.45, 0.2, 0, 2.00, 0.4, 0.4, 0.9, 0.012, 0.08, G, D],
+  [50.2, 0.48, 0.48, 0.2, -0.3, 2.1, 0.42, 0.42, 0.9, 0.012, 0.08, G, D],
+  // the Clearing: an open reach with deeper pools (Nigatron's pools in the field notes)
+  [51.0, 0.8, 0.9, 0.45, -0.15, 1.0, 0.25, 0.55, 1.2, 0.012, 0.07, G, D],
+  [52.4, 0.95, 1.0, 0.6, 0, 0.9, 0.25, 0.6, 1.2, 0.012, 0.07, S, D],
+  [53.5, 0.5, 0.5, 0.22, 0, 1.6, 0.35, 0.4, 0.9, 0.012, 0.08, G, D],
   // Crawfish Springs
   [54.6, 0.62, 0.62, 0.3, 0, 1.08, 0.35, 0.35, 1.2, 0.01, 0.08, S, D],
   [55.8, 0.98, 0.98, 0.55, 0.2, 0.8, 0.35, 0.35, 1.2, 0.01, 0.1, S, D],
@@ -65,6 +115,9 @@ const K = [
   [67.3, 0.27, 0.27, 0.09, 2.0, 1.2, 0.5, 0.9, 0.4, 0.02, 0.12, R, R],
   // Continental Shelf
   [68.0, 0.27, 0.27, 0.075, 2.0, 1.0, -1.25, 1.5, 0.16, 0.012, 0.08, R, R],
+  [71.6, 0.27, 0.3, 0.075, 2.1, 1.0, -1.25, 1.2, 0.2, 0.012, 0.08, R, R],
+  [72.6, 0.27, 0.5, 0.1, 2.15, 0.9, -1.25, 0.1, 0.35, 0.01, 0.08, R, R],
+  [75.0, 0.27, 0.48, 0.1, 2.2, 0.95, -1.25, 0.12, 0.35, 0.01, 0.08, R, R],
   [76.0, 0.26, 0.26, 0.07, 2.2, 1.0, -1.25, 1.5, 0.16, 0.012, 0.08, R, R],
   [77.9, 0.26, 0.26, 0.07, 1.6, 1.15, -1.25, 1.4, 0.16, 0.012, 0.1, R, R],
   [78.3, 0.28, 0.28, 0.07, 1.4, 1.2, -1.25, 1.4, 0.16, 0.012, 0.1, R, R],
@@ -91,11 +144,18 @@ const K = [
 ];
 
 const SLOPES = [
+  [-152, 0.002], [-138.3, 0.09], [-128.5, 0.035], [-108.6, 0.012], [-105.5, 0.03], [-91, 0.0], [-86.8, 0.03],
+  [-78, 0.006], [-61, 0.03], [-56, 0.028], [-38.6, 0.02], [-27.2, 0.045], [-22.6, 0.004], [-19.6, 0.025],
+  [-16, 0.02], [-3.2, 0.045],
   [-5, 0.045], [34, 0.012], [54, 0.003], [62.3, 0.11], [67.6, 0.02], [79.0, 0.06],
   [86, 0.0], [90, 0.035], [92, 0.035], [108, 0.02],
 ];
 // Steps: centre s, drop height, transition length
 export const STEPS = [
+  { s: -12.5, h: 0.35, len: 0.12, name: 'slate1' },
+  { s: -9.0, h: 0.35, len: 0.12, name: 'slate2' },
+  { s: -5.6, h: 0.35, len: 0.12, name: 'slate3' },
+  { s: -91.0, h: 3.2, len: 0.12, name: 'spillwayFalls' },
   { s: 9.0, h: 1.1, len: 0.1, name: 'gorge1' },
   { s: 20.0, h: 0.9, len: 0.1, name: 'gorge2' },
   { s: 78.45, h: 1.3, len: 0.16, name: 'shelf' },
@@ -104,6 +164,7 @@ export const STEPS = [
 
 // Plunge pools below drops: start s, length, half width of the jet/roller zone
 const POOLS = [
+  { s: -91.0, len: 1.7, w: 0.55, jet: 1.0, jetDepth: 0.35, under: 0.6, boil: 0.35 },
   { s: 86.0, len: 1.45, w: 0.62, jet: 0.9, jetDepth: 0.32, under: 0.55, boil: 0.35 },
   { s: 9.0, len: 0.6, w: 0.35, jet: 0.6, jetDepth: 0.22, under: 0.5, boil: 0.25 },
   { s: 20.0, len: 0.6, w: 0.35, jet: 0.6, jetDepth: 0.22, under: 0.5, boil: 0.25 },
@@ -259,11 +320,12 @@ export class Creek {
     // elevation profile: integrate slopes + steps downstream
     let y = 0;
     const yArr = new Float64Array(n);
+    const slopes = SLOPES.slice().sort((a, b) => a[0] - b[0]);
     for (let i = 0; i < n; i++) {
       const s = S_MIN + i * DS;
       if (i > 0) {
         let sl = 0;
-        for (const [ss, v] of SLOPES) if (s >= ss) sl = v;
+        for (const [ss, v] of slopes) if (s >= ss) sl = v;
         y -= sl * DS;
       }
       yArr[i] = y;
@@ -324,17 +386,72 @@ export class Creek {
       // chute polyline in channel coords: release on the bench, kink over the water's edge, exit in the shallows
       pad.chute = [
         { s: s - 0.62, d: c + wR + 0.75, y: pad.y + 0.56 },
-        { s: s - 0.16, d: c + wR - 0.02, y: y0 + 0.1 },
-        { s: s + 0.14, d: c + wR - 0.28, y: y0 + 0.045 },
+        { s: s - 0.16, d: c + wR - 0.02, y: y0 + 0.11 },
+        { s: s + 0.12, d: c + wR - 0.2, y: y0 + 0.075 },
       ];
       return pad;
     });
     this.island = { s0: 44.9, s1: 49.4, dOff: 0.36, halfW: 0.25, h: 0.09 };
+    // islands that split the flow into two lanes which rejoin downstream
+    this.islands = [
+      this.island,
+      { s0: -51.0, s1: -41.5, dOff: -0.36, halfW: 0.3, h: 0.14, rock: true, name: 'Splitstone' },
+      { s0: -120.8, s1: -110.6, dOff: 0.0, halfW: 0.12, h: 0.28, rock: true, name: 'Sluice rib' },
+    ];
+    // the alternate route at the waterfall split: a stepped cascade on the creek-left that
+    // rejoins the plunge pool. The primary (creek-right) route goes over the falls.
+    this.alt = { s0: 83.3, s1: 89.9, w: 0.2, D: 0.09, U: 1.25, off: -1.35 };
+    this.alt.ya = null; // filled after rows exist
+    // Crawfish Springs double-pond spring and its runoff chute (right bank, above the pool)
+    this.ponds = [
+      { s: 56.9, dOff: 1.75, rs: 0.95, rd: 0.62, depth: 0.32, lift: 0.34 },
+      { s: 58.5, dOff: 1.9, rs: 0.85, rd: 0.58, depth: 0.3, lift: 0.3 },
+    ];
+    this.runoff = { s0: 58.9, s1: 59.6, dTop: 1.35, dBot: 0.85 };
+    // Code Rot observations (simulated): strongest at the Springs, patchy upstream to the Shelf head
+    this.codeRot = [
+      { s: 58.2, dOff: 0.9, r: 1.4, k: 1.0 }, { s: 56.3, dOff: -1.2, r: 1.0, k: 0.7 }, { s: 60.8, dOff: 0.8, r: 0.9, k: 0.8 },
+      { s: 63.8, dOff: 0.5, r: 0.7, k: 0.45 }, { s: 66.5, dOff: 1.6, r: 0.8, k: 0.35 },
+    ];
+    // Flat Rocks slabs (right side of the Shelf route)
+    this.slabs = [
+      { s0: 72.7, s1: 74.1, d0: 0.06, d1: 0.9, h: 0.05, undercut: true },
+      { s0: 74.0, s1: 75.0, d0: 0.08, d1: 0.75, h: 0.07, undercut: true },
+    ];
     // Exposed gravel bar on the inside of the Grounds bend
     this.gravelBar = { s0: 94.4, s1: 96.6, side: 1 };
     this.roughPatch = { s0: 95.05, s1: 95.95 };
     this.matOn = false;
+    this.mods = {};
     this.potholes = [];
+  }
+
+  altD(s) {
+    const a = this.alt;
+    const c = this.c(s);
+    const t = clamp((s - a.s0) / (a.s1 - a.s0), 0, 1);
+    // leave the main channel, run along the creek-left, then come back into the pool
+    const out = smoothstep(0, 0.2, t) * (1 - smoothstep(0.82, 1, t) * 0.62);
+    return c + a.off * out;
+  }
+  altY(s) {
+    const a = this.alt;
+    const t = clamp((s - a.s0) / (a.s1 - a.s0), 0, 1);
+    const y0 = this.y0(a.s0), y1 = this.y0(a.s1);
+    // stepped cascade: four little drops linked by short runs
+    const k = t * 4, i = Math.min(3, Math.floor(k)), f = k - i;
+    const step = (i + smoothstep(0.78, 0.92, f)) / 4;
+    const prof = 0.35 * t + 0.65 * step;
+    return y0 + (y1 - y0) * prof;
+  }
+  /** 'main', 'alt' or null for which water channel a point lies in. */
+  channelOf(s, d, margin = 0) {
+    const c = this.c(s), dc = d - c;
+    const w = dc < 0 ? this.wL(s) : this.wR(s);
+    if (Math.abs(dc) <= w + margin) return 'main';
+    const a = this.alt;
+    if (s > a.s0 && s < a.s1 && Math.abs(d - this.altD(s)) <= a.w + margin) return 'alt';
+    return null;
   }
 
   /** Raw bed function (used only for baking). */
@@ -384,17 +501,71 @@ export class Creek {
         bed += (0.1 * rn - 0.03) * smoothstep(0.02, 0.25, tb) * (1 - smoothstep(bankW + 0.5, bankW + 1.6, tb));
       }
     }
-    // ---- island (Alder Bend)
-    const isl = this.island;
-    if (s > isl.s0 && s < isl.s1) {
+    // ---- islands (Alder Bend, Splitstone Fork, the Sluice rib)
+    for (const isl of this.islands) {
+      if (s <= isl.s0 || s >= isl.s1) continue;
       const ts = (s - isl.s0) / (isl.s1 - isl.s0);
       const hw = isl.halfW * Math.sin(Math.PI * ts) ** 0.6;
       const di = Math.abs(d - (c + isl.dOff));
       if (di < hw + 0.12) {
         const m = 1 - smoothstep(hw - 0.05, hw + 0.12, di);
-        const top = y0 + isl.h * Math.sin(Math.PI * ts) ** 0.4 + 0.015 * n2;
-        if (top > bed) { bed = lerp(bed, top, m); if (m > 0.4) mat = MAT.GRAVEL; }
+        const top = y0 + isl.h * Math.sin(Math.PI * ts) ** 0.4 + (isl.rock ? 0.03 * n1 : 0.015 * n2);
+        if (top > bed) { bed = lerp(bed, top, m); if (m > 0.4) mat = isl.rock ? MAT.ROCK : MAT.GRAVEL; }
       }
+    }
+    // ---- alternate route at the waterfall split: a stepped cascade carved into a rock terrace
+    const al = this.alt;
+    if (s > al.s0 - 0.2 && s < al.s1 + 0.2) {
+      const ad = this.altD(s), da = Math.abs(d - ad);
+      const corridor = al.w + 0.5;
+      if (da < corridor + 0.3) {
+        const ya = this.altY(s);
+        let ab;
+        if (da <= al.w) { const p = 1 - (da / al.w) ** 2; ab = ya + 0.01 - (al.D + 0.01) * Math.pow(p, 0.55); }
+        else ab = ya + 0.01 + 0.3 * smoothstep(0, 0.18, da - al.w) + 0.04 * n1;
+        const mEdge = 1 - smoothstep(corridor, corridor + 0.3, da);
+        const mMid = smoothstep(al.s0 + 0.6, al.s0 + 1.4, s) * (1 - smoothstep(al.s1 - 1.0, al.s1 - 0.3, s));
+        const target = lerp(Math.min(bed, ab), ab, mMid);
+        bed = lerp(bed, target, mEdge);
+        if (da <= al.w + 0.02 && mEdge > 0.5) mat = MAT.ROCK;
+      }
+    }
+    // ---- Crawfish Springs double-pond spring and runoff chute (right bank)
+    for (const pd of this.ponds) {
+      const es = (s - pd.s) / pd.rs, ed = (d - (this.c(pd.s) + pd.dOff)) / pd.rd;
+      const r = Math.sqrt(es * es + ed * ed);
+      if (r < 1.6) {
+        const lvl = this.y0(pd.s) + pd.lift;
+        const rim = lvl + 0.06 + 0.04 * n2;
+        const pond = r < 1 ? lvl - pd.depth * (1 - r * r) ** 0.6 : rim + 0.08 * smoothstep(1, 1.6, r);
+        const m = 1 - smoothstep(1.3, 1.6, r);
+        bed = lerp(bed, pond, m);
+        if (r < 1.05) mat = MAT.SAND;
+      }
+    }
+    {
+      const ro = this.runoff;
+      if (s > ro.s0 - 0.2 && s < ro.s1 + 0.2) {
+        const t = clamp((s - ro.s0) / (ro.s1 - ro.s0), 0, 1);
+        const cd = this.c(s) + lerp(ro.dTop, ro.dBot, t);
+        const dd = Math.abs(d - cd);
+        if (dd < 0.22) {
+          const top = this.y0(58.5) + 0.3, botY = this.y0(s) + 0.01;
+          const floor = lerp(top, botY, t) - 0.04 * (1 - (dd / 0.22) ** 2);
+          bed = Math.min(bed, lerp(bed, floor, 1 - smoothstep(0.1, 0.22, dd)));
+        }
+      }
+    }
+    // ---- Flat Rocks: broad low slabs with a shadowed undercut at the water
+    for (const sb of this.slabs) {
+      if (s < sb.s0 - 0.2 || s > sb.s1 + 0.2) continue;
+      const dd = d - (c + this.rWR[i]);
+      if (dd < sb.d0 - 0.08 || dd > sb.d1 + 0.3) continue;
+      const ms = smoothstep(sb.s0 - 0.15, sb.s0 + 0.05, s) * (1 - smoothstep(sb.s1 - 0.05, sb.s1 + 0.15, s));
+      const md = smoothstep(sb.d0 - 0.06, sb.d0, dd) * (1 - smoothstep(sb.d1, sb.d1 + 0.25, dd));
+      const top = y0 + sb.h + 0.008 * n2;
+      bed = lerp(bed, Math.max(bed, top), ms * md);
+      if (ms * md > 0.5) mat = MAT.ROCK;
     }
     // ---- gravel bar on inside of the Grounds bend (right side)
     const gb = this.gravelBar;
@@ -444,6 +615,14 @@ export class Creek {
       const t = (u - 1) * w;
       const ms = Math.sin(Math.PI * (s - 86.25) / 2.15);
       bed -= 0.16 * ms * Math.exp(-((t - 0.32) ** 2) / 0.012);
+    }
+    // ---- dry hollows beside the first Slate pocket pool and beside the Spillway apron
+    for (const [h0, h1, depth] of [[-12.4, -11.2, 0.12], [-90.85, -88.6, 0.18]]) {
+      if (s > h0 && s < h1 && u > 1) {
+        const t = (u - 1) * w;
+        const ms = Math.sin(Math.PI * (s - h0) / (h1 - h0));
+        bed -= depth * ms * Math.exp(-((t - 0.3) ** 2) / 0.012);
+      }
     }
     // ---- potholes worn into the dry rock shelf beside the waterfall lip
     for (const ph of this.potholes) {
@@ -531,11 +710,24 @@ export class Creek {
     const c = this.rC[i] + (this.rC[i + 1] - this.rC[i]) * t;
     const dc = d - c;
     const w = dc < 0 ? this.rWL[i] + (this.rWL[i + 1] - this.rWL[i]) * t : this.rWR[i] + (this.rWR[i + 1] - this.rWR[i]) * t;
-    if (Math.abs(dc) > w + 0.03) return -Infinity;
-    return this.rY0[i] + (this.rY0[i + 1] - this.rY0[i]) * t;
+    if (Math.abs(dc) <= w + 0.03) return this.rY0[i] + (this.rY0[i + 1] - this.rY0[i]) * t;
+    const a = this.alt;
+    if (s > a.s0 && s < a.s1 && Math.abs(d - this.altD(s)) <= a.w + 0.03) return this.altY(s);
+    if (s > 55.5 && s < 60) {
+      for (const pd of this.ponds) {
+        const es = (s - pd.s) / pd.rs, ed = (d - (this.c(pd.s) + pd.dOff)) / pd.rd;
+        if (es * es + ed * ed < 1) return this.y0(pd.s) + pd.lift;
+      }
+    }
+    return -Infinity;
   }
 
+  /** In either water channel (the main creek or the alternate route at the split). */
   inChannel(s, d, margin = 0) {
+    return this.channelOf(s, d, margin) !== null;
+  }
+
+  inMain(s, d, margin = 0) {
     const c = this.c(s), dc = d - c;
     const w = dc < 0 ? this.wL(s) : this.wR(s);
     return Math.abs(dc) <= w + margin;
@@ -584,7 +776,7 @@ export class Creek {
     }
     // In-channel features
     // Gorge: lip rocks at both steps + landing rocks at the first step (angled deflectors)
-    for (const st of [STEPS[0], STEPS[1]]) {
+    for (const st of STEPS.filter((x) => x.name === 'gorge1' || x.name === 'gorge2')) {
       const c = this.c(st.s - 0.15);
       add(st.s - 0.12, c - 0.3, 0.09, { bury: 0.4, tag: 'lip' });
       add(st.s - 0.12, c + 0.3, 0.09, { bury: 0.4, tag: 'lip' });
@@ -619,8 +811,8 @@ export class Creek {
       add(s, dd, r, { bury, tag: 'catch', group: 'catchJumble' });
     }
     // the busiest bottleneck: at the Springs pool outlet two rocks leave a ball-sized notch
-    add(61.92, this.c(61.92) - 0.27, 0.045, { y: this.y0(61.92) - 0.02, bury: 0.5, tag: 'snag', group: 'outletNotch' });
-    add(62.0, this.c(62.0) - 0.375, 0.05, { y: this.y0(62.0) - 0.02, bury: 0.5, tag: 'snag', group: 'outletNotch' });
+    add(61.92, this.c(61.92) - 0.44, 0.045, { y: this.y0(61.92) - 0.02, bury: 0.5, tag: 'snag', group: 'outletNotch' });
+    add(62.0, this.c(62.0) - 0.54, 0.05, { y: this.y0(62.0) - 0.02, bury: 0.5, tag: 'snag', group: 'outletNotch' });
     // a ball-sized notch between two rocks beside the landing
     add(79.22, this.c(79.22) + 0.1, 0.045, { y: this.y0(79.22) - 0.02, bury: 0.5, tag: 'catch', group: 'catchJumble' });
     add(79.3, this.c(79.3) + 0.2, 0.05, { y: this.y0(79.3) - 0.02, bury: 0.5, tag: 'catch', group: 'catchJumble' });
@@ -635,6 +827,29 @@ export class Creek {
     for (const [s, dd, r] of [[81.5, 0.18, 0.05], [83.2, -0.16, 0.05], [84.6, 0.15, 0.045]]) add(s, this.c(s) + dd, r, { bury: 0.45, tag: 'stone' });
     // Grounds: rocks in the gravel bend
     for (const [s, dd, r] of [[96.2, -0.28, 0.06], [97.5, 0.3, 0.05]]) add(s, this.c(s) + dd, r, { bury: 0.45, tag: 'stone' });
+    // ---- Slate Steps: edge rocks on the first slab kick fast balls sideways
+    for (const side of [-1, 1]) add(-12.58, this.c(-12.58) + side * 0.4, 0.07, { y: this.y0(-12.58) - 0.03, bury: 0.5, tag: 'slateEdge' });
+    add(-12.6, this.c(-12.6) + 0.18, 0.05, { y: this.y0(-12.6) - 0.035, bury: 0.5, tag: 'slateEdge' });
+    // the second pocket pool's outlet lip (removed by the Slate Pool Outlet)
+    for (const dd of [-0.2, 0.2]) add(-7.75, this.c(-7.75) + dd, 0.06, { y: this.y0(-7.75) - 0.035, bury: 0.5, tag: 'slateLip', group: 'slateLip' });
+    // a fictional leaf-covered pocket on the creek-left (guarded by the Leaf-Cavern Grate)
+    add(-14.62, this.c(-14.62) - 0.37, 0.045, { y: this.y0(-14.62) - 0.02, bury: 0.5, tag: 'leafPocket', group: 'leafPocket' });
+    add(-14.52, this.c(-14.52) - 0.475, 0.05, { y: this.y0(-14.52) - 0.02, bury: 0.5, tag: 'leafPocket', group: 'leafPocket' });
+    // ---- Willow Narrows: a snag notch at the inside root
+    add(-25.9, this.c(-25.9) + 0.12, 0.04, { y: this.y0(-25.9) - 0.02, bury: 0.5, tag: 'willowSnag', group: 'willowSnag' });
+    add(-25.8, this.c(-25.8) + 0.21, 0.045, { y: this.y0(-25.8) - 0.02, bury: 0.5, tag: 'willowSnag', group: 'willowSnag' });
+    // ---- Splitstone: rocks in the direct lane
+    for (const [ss, dd] of [[-49.4, 0.4], [-47.6, 0.12], [-45.5, 0.42], [-43.6, 0.1]]) add(ss, this.c(ss) + dd, 0.05, { bury: 0.4, tag: 'splitRock' });
+    // ---- Spillway Falls: rocks on the apron scatter landing balls
+    add(-90.25, this.c(-90.25) - 0.13, 0.08, { y: this.y0(-90.25) + 0.03, bury: 0.5, tag: 'apron', group: 'spillApronRocks' });
+    add(-90.1, this.c(-90.1) + 0.15, 0.075, { y: this.y0(-90.1) + 0.03, bury: 0.5, tag: 'apron', group: 'spillApronRocks' });
+    // ---- Boulder Sluice: staggered rocks in both lanes, and a constriction at the gravel-bar merge
+    for (const [ss, dd] of [[-119.6, 0.42], [-118.0, -0.45], [-116.4, 0.5], [-114.8, -0.4], [-113.2, 0.45], [-111.8, -0.48]]) add(ss, this.c(ss) + dd, 0.055, { bury: 0.35, tag: 'sluiceRock' });
+    for (const dd of [-0.34, 0.34]) add(-108.3, this.c(-108.3) + dd, 0.1, { y: this.y0(-108.3) - 0.04, bury: 0.5, tag: 'mergeRock', group: 'sluiceMergeRocks' });
+    // ---- Cold Spring outflow: a few cobbles in the steep run
+    for (const [ss, dd] of [[-136.5, 0.12], [-134.8, -0.1], [-132.9, 0.1], [-131.0, -0.12]]) add(ss, this.c(ss) + dd, 0.04, { bury: 0.45, tag: 'stone' });
+    // ---- the Clearing: an exposed cobble toe below the wooded Shelf side
+    for (let k = 0; k < 18; k++) { const ss = 50.8 + rnd() * 2.8; add(ss, this.c(ss) + this.wR(ss) + 0.05 + rnd() * 0.3, 0.04 + rnd() * 0.05, { bury: 0.35, tag: 'cobble' }); }
     // rough patch pebbles (covered by the mat)
     for (let k = 0; k < 7; k++) {
       const s = this.roughPatch.s0 + 0.08 + rnd() * 0.75;
@@ -663,6 +878,17 @@ export class Creek {
       // stagnant lower corners of the Springs pool beside the spillway mouth (the busiest bottleneck)
       { s: 61.75, d: -0.52, R: 0.17, v: 0.05, trap: 0.14, tag: 'cornerL' }, { s: 61.75, d: 0.5, R: 0.17, v: -0.05, trap: 0.14, tag: 'cornerR' },
       { s: 88.2, d: 0.6, R: 0.34, v: -0.32, trap: 0.45, tag: 'poolEddy' },
+      // Code Rot pocket at the mouth of the Springs runoff chute (simulated obstruction)
+      { s: 58.9, d: 0.74, R: 0.24, v: -0.06, trap: 0.22, tag: 'codeRot' },
+      // the Clearing's deep pool turns slowly
+      { s: 52.3, d: -0.55, R: 0.38, v: 0.12, trap: 0.03, ring: true, tag: 'clearing' },
+      // new reaches
+      { s: -145.5, d: 0.78, R: 0.42, v: -0.08, trap: 0.22, tag: 'headMargin' },
+      { s: -89.6, d: 0.42, R: 0.24, v: -0.22, trap: 0.12, tag: 'spillPoolR' }, { s: -89.6, d: -0.42, R: 0.24, v: 0.22, trap: 0.12, tag: 'spillPoolL' },
+      { s: -68.2, d: -0.62, R: 0.62, v: 0.32, trap: 0.12, ring: true, tag: 'basinEddy' },
+      { s: -8.45, d: 0.0, R: 0.36, v: 0.14, trap: 0.22, tag: 'slatePocket' },
+      { s: -21.3, d: 0.35, R: 0.24, v: -0.12, trap: 0.06, tag: 'willowExitR' }, { s: -21.3, d: -0.35, R: 0.24, v: 0.12, trap: 0.06, tag: 'willowExitL' },
+      { s: -109.2, d: 0.42, R: 0.2, v: -0.1, trap: 0.1, tag: 'sluiceBar' },
     ];
     this.eddies = eddies;
     const wetRocks = this.rocks.filter((r) => {
@@ -689,15 +915,23 @@ export class Creek {
           // slower near banks and in shallow edges
           const prof = Math.sqrt(clamp(1 - Math.pow(Math.min(u, 1), 4), 0.0, 1)) * 0.88 + 0.12;
           let sp = U * prof;
-          // island: water splits around it
-          const isl = this.island;
-          if (s > isl.s0 - 0.4 && s < isl.s1 + 0.4) {
+          // islands: water splits around them and comes back together below
+          for (const isl of this.islands) {
+            if (s <= isl.s0 - 0.4 || s >= isl.s1 + 0.4) continue;
             const di = d - (c + isl.dOff);
             const ts = clamp((s - isl.s0) / (isl.s1 - isl.s0), 0, 1);
             const push = Math.exp(-di * di / 0.08) * Math.sin(Math.PI * ts);
             vd += Math.sign(di || 1) * push * 0.25 * (s < (isl.s0 + isl.s1) / 2 ? 1 : -1);
-            if (dc > 0.8 && s > 45.8 && s < 47.8) sp *= 0.15; // dead pocket: almost still
+            // Splitstone: the creek-left lane is the long calm one
+            if (isl.name === 'Splitstone' && di < 0 && s > isl.s0 && s < isl.s1) sp *= 0.55;
           }
+          if (dc > 0.8 && s > 45.8 && s < 47.8) sp *= 0.15; // Alder dead pocket: almost still
+          // Long Eddy Basin: fast tongue near the outside (right) bank
+          if (s > -73.5 && s < -62.5 && dc > 0.25) sp *= 1 + 0.45 * Math.sin(Math.PI * (s + 73.5) / 11);
+          // Willow Narrows exit pool: slack water where balls bunch
+          if (s > -22.6 && s < -19.8) sp *= 0.75;
+          // the waterfall split: the left side of the channel peels off towards the alternate route
+          if (s > 82.9 && s < 84.4 && dc < 0.02) vd -= 0.95 * Math.sin(Math.PI * (s - 82.9) / 1.5) * smoothstep(-0.02, 0.12, -dc);
           // plunge pool roller below the waterfall
           if (s > 86.02 && s < 87.25) {
             const rs = (s - 86.02) / 1.23;
@@ -708,7 +942,7 @@ export class Creek {
           }
           // the plunge pool's outflow skews towards its outside (left) edge
           // gorge step pools have smaller rollers
-          for (const st of [STEPS[0], STEPS[1]]) {
+          for (const st of STEPS.filter((x) => x.name === 'gorge1' || x.name === 'gorge2')) {
             if (s > st.s + 0.02 && s < st.s + 0.55) {
               const rs = (s - st.s - 0.02) / 0.53;
               const lat = 1 - smoothstep(0.15, 0.4, Math.abs(dc));
@@ -767,6 +1001,19 @@ export class Creek {
           }
           if (u > 1) { const f = 1 - smoothstep(1, 1.15, u); vs *= f; vd *= f; }
         }
+        // the alternate cascade route carries its own current
+        const al = this.alt;
+        if (s > al.s0 && s < al.s1 && (u >= 1 || vs === 0)) {
+          const da = d - this.altD(s);
+          const ua = Math.abs(da) / al.w;
+          if (ua < 1.15) {
+            const dd = (this.altD(s + 0.1) - this.altD(s - 0.1)) / 0.2;
+            const l2 = Math.hypot(1, dd);
+            const sp = al.U * (Math.sqrt(clamp(1 - Math.min(ua, 1) ** 4, 0, 1)) * 0.85 + 0.15) * (1 - smoothstep(1, 1.15, ua));
+            const f = u >= 1 ? 1 : 0.5;
+            vs = vs * (1 - f) + (sp / l2) * f; vd = vd * (1 - f) + (sp * dd / l2) * f;
+          }
+        }
         this.flowS[i * nd + j] = vs;
         this.flowD[i * nd + j] = vd;
       }
@@ -821,6 +1068,18 @@ export class Creek {
         if (x > 0.62 && x < 0.95 && dep > -0.05) out.vy = Math.max(out.vy, P.boil * Math.sin(Math.PI * (x - 0.62) / 0.33) * lat);
       }
     }
+    // installed equipment that changes the water itself
+    const M = this.mods;
+    if (M) {
+      if (M.basinVane && s > -73 && s < -62.5) {
+        const dc = d - this.rC[ri];
+        if (dc < 0.3 && dc > -1.3) { const f = Math.sin(Math.PI * (s + 73) / 10.5); vd += 0.32 * f; vs += 0.22 * f; }
+      }
+      if (M.slateOutlet && s > -8.9 && s < -7.4) { const dc = d - this.rC[ri]; if (Math.abs(dc) < 0.6) vs += 0.4 * (1 - Math.abs(dc) / 0.6); }
+      if (M.headGuide && s > -148.5 && s < -139.5) { const dc = d - this.rC[ri]; if (dc > 0.3) { vd -= 0.28; vs += 0.12; } }
+      if (M.sluiceMerge && s > -110.8 && s < -105.8) { const dc = d - this.rC[ri]; if (Math.abs(dc) < 0.6) vs += 0.3; }
+      if (M.habitatGuide && s > 57.2 && s < 60.6) { const dc = d - this.rC[ri]; if (dc > 0.45) vd -= 0.2; }
+    }
     const nx = -tz, nz = tx;
     out.vx = tx * vs + nx * vd;
     out.vz = tz * vs + nz * vd;
@@ -834,9 +1093,11 @@ export class Creek {
       const ri = Math.round(this.rowIndex(s));
       const m = Math.sin(Math.PI * (s - 76.6) / 3.0) * (1 - smoothstep(1.2, 3.2, Math.abs(d - 1.4)));
       const gust = 0.75 + 0.25 * Math.sin(t * 1.3) * Math.sin(t * 0.37 + 1);
-      out.vy = -5.0 * m * gust;
+      // a Shelf Wind Screen breaks the draft along the protected ball lane
+      const screen = this.mods && this.mods.windScreen && Math.abs(d - 1.6) < 0.7 && s < 78.6 ? 0.3 : 1;
+      out.vy = -5.0 * m * gust * screen;
       // push towards the lower catch area (towards the approach channel at d≈0.5)
-      const lat = clamp((1.2 - d) * 1.5, -2.2, 2.2) * m * gust;
+      const lat = clamp((1.2 - d) * 1.5, -2.2, 2.2) * m * gust * screen;
       const fr = this.frame(s);
       out.vx = fr.nx * lat + fr.tx * 0.6 * m;
       out.vz = fr.nz * lat + fr.tz * 0.6 * m;
@@ -942,6 +1203,80 @@ export class Creek {
       const pts = [[55.6, -0.25], [57.2, -0.45], [59.2, -0.45], [60.8, -0.3]].map(([s, dd]) => P(s, this.c(s) + dd, this.y0(s) + 0.03));
       for (let i = 0; i < pts.length - 1; i++) capsule(pts[i], pts[i + 1], 0.012, MAT.METAL, 'debrisScreen', 'screen');
       this.screenPts = pts;
+    }
+    // ---- Willow Narrows: roots that pinch the exit, the root shield, and the exit flare
+    {
+      const y = this.y0(-23.5);
+      const pinch = [[[-23.75, -0.22], [-23.35, -0.055]], [[-23.7, 0.23], [-23.3, 0.062]]];
+      for (const [a, b] of pinch) capsule(P(a[0], this.c(a[0]) + a[1], y + 0.05), P(b[0], this.c(b[0]) + b[1], y + 0.012), 0.026, MAT.WOOD, 'willowPinch', 'root');
+      this.willowRoots = pinch.map(([a, b]) => [P(a[0], this.c(a[0]) + a[1], y + 0.05), P(b[0], this.c(b[0]) + b[1], y + 0.012)]);
+      // the inside root over the snag notch, always present
+      capsule(P(-26.15, this.c(-26.15) + 0.3, this.y0(-26.15) + 0.06), P(-25.75, this.c(-25.75) + 0.13, this.y0(-25.75) + 0.012), 0.022, MAT.WOOD, null, 'root');
+      this.willowInsideRoot = [P(-26.15, this.c(-26.15) + 0.3, this.y0(-26.15) + 0.06), P(-25.75, this.c(-25.75) + 0.13, this.y0(-25.75) + 0.012)];
+      const sa = P(-26.35, this.c(-26.35) + 0.2, this.y0(-26.35) + 0.016), sb = P(-25.95, this.c(-25.95) + 0.075, this.y0(-25.95) + 0.016);
+      capsule(sa, sb, 0.012, MAT.METAL, 'willowShield', 'rail');
+      this.willowShieldPts = [sa, sb];
+      for (const side of [-1, 1]) {
+        const a = P(-23.9, this.c(-23.9) + side * 0.13, y + 0.04), b = P(-22.9, this.c(-22.9) + side * 0.34, y + 0.03);
+        cols.push(this.obbFromSegment(a, b, 0.01, 0.05, MAT.WOOD, 'willowFlare'));
+      }
+    }
+    // ---- Slate Steps: edge bumpers on the first pocket pool, the leaf-cavern grate
+    {
+      for (const side of [-1, 1]) {
+        const a = P(-12.85, this.c(-12.85) + side * 0.34, this.y0(-12.8) + 0.06), b = P(-11.5, this.c(-11.5) + side * 0.5, this.y0(-11.6) + 0.06);
+        cols.push(this.obbFromSegment(a, b, 0.012, 0.12, MAT.WOOD, 'slateBumpers'));
+      }
+      const ga = P(-14.9, this.c(-14.9) - 0.49, this.y0(-14.9) + 0.03), gb = P(-14.55, this.c(-14.55) - 0.31, this.y0(-14.55) + 0.03);
+      cols.push(this.obbFromSegment(ga, gb, 0.008, 0.06, MAT.METAL, 'leafGrate'));
+    }
+    // ---- Splitstone: the adjustable gate at the island tip and the merge rail
+    {
+      const tip = [-51.15, this.c(-51.15) - 0.36];
+      const y = this.y0(-51.2) + 0.02;
+      const T = P(tip[0], tip[1], y);
+      capsule(T, P(-52.0, this.c(-52.0) - 0.95, y), 0.02, MAT.WOOD, 'gateDirect', 'gate');
+      capsule(T, P(-52.0, this.c(-52.0) + 0.55, y), 0.02, MAT.WOOD, 'gateCalm', 'gate');
+      this.splitGatePivot = T;
+      const ma = P(-41.6, this.c(-41.6) - 0.36, this.y0(-41.6) + 0.02), mb = P(-40.2, this.c(-40.2) - 0.12, this.y0(-40.2) + 0.02);
+      capsule(ma, mb, 0.018, MAT.WOOD, 'splitMergeRail', 'rail');
+    }
+    // ---- Long Eddy Basin float boom along the eddy line
+    {
+      const pts = [[-72.4, -0.15], [-70, -0.18], [-67.5, -0.12], [-65, -0.05], [-63.2, 0.05]].map(([ss, dd]) => P(ss, this.c(ss) + dd, this.y0(ss) + 0.01));
+      for (let q = 0; q < pts.length - 1; q++) capsule(pts[q], pts[q + 1], 0.03, MAT.RUBBER, 'basinBoom', 'boom');
+      this.basinBoomPts = pts;
+    }
+    // ---- Spillway Falls: splash apron over the apron rocks
+    {
+      const a = P(-90.82, this.c(-90.82), this.y0(-90.5) + 0.13), b = P(-89.4, this.c(-89.4), this.y0(-89.4) + 0.0);
+      cols.push(this.obbFromSegment(a, b, 0.4, 0.012, MAT.WOOD, 'spillApron', true));
+      for (const side of [-1, 1]) capsule(P(-90.8, this.c(-90.8) + side * 0.4, this.y0(-90.5) + 0.2), P(-89.4, this.c(-89.4) + side * 0.4, this.y0(-89.4) + 0.06), 0.015, MAT.WOOD, 'spillApron', 'lip');
+    }
+    // ---- Boulder Sluice alternator flaps at the rib tip
+    {
+      const tip = P(-121.0, this.c(-121.0), this.y0(-121.0) + 0.02);
+      capsule(tip, P(-121.7, this.c(-121.7) - 0.6, this.y0(-121.7) + 0.02), 0.02, MAT.METAL, 'sluiceToRight', 'flap');
+      capsule(tip, P(-121.7, this.c(-121.7) + 0.6, this.y0(-121.7) + 0.02), 0.02, MAT.METAL, 'sluiceToLeft', 'flap');
+      this.sluicePivot = tip;
+    }
+    // ---- Cold Spring Headwaters: surface guide out of the quiet margin, intake rails
+    {
+      const pts = [[-148.6, 0.42], [-146, 0.38], [-143, 0.32], [-140.2, 0.2]].map(([ss, dd]) => P(ss, this.c(ss) + dd, this.y0(ss) + 0.01));
+      for (let q = 0; q < pts.length - 1; q++) capsule(pts[q], pts[q + 1], 0.028, MAT.RUBBER, 'headGuide', 'boom');
+      this.headGuidePts = pts;
+      for (const side of [-1, 1]) {
+        const rp = [];
+        rp.push(P(-138.7, this.c(-138.7) + side * 0.5, this.y0(-138.7) + 0.02));
+        for (let ss = -137.9; ss <= -130; ss += 0.4) rp.push(P(ss, this.c(ss) + side * 0.09, this.y0(ss) + 0.025));
+        for (let q = 0; q < rp.length - 1; q++) capsule(rp[q], rp[q + 1], 0.01, MAT.METAL, 'headRails', 'rail');
+      }
+    }
+    // ---- Crawfish Springs: raised guide around the habitat edge, rejoining at the spillway
+    {
+      const pts = [[56.9, 0.5], [58.0, 0.48], [59.2, 0.5], [60.4, 0.45], [61.6, 0.3]].map(([ss, dd]) => P(ss, this.c(ss) + dd, this.y0(ss) + 0.02));
+      for (let q = 0; q < pts.length - 1; q++) capsule(pts[q], pts[q + 1], 0.02, MAT.WOOD, 'habitatBypass', 'boom');
+      this.habitatPts = pts;
     }
     // ---- finish gate posts
     {
