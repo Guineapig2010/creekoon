@@ -105,8 +105,8 @@ Two of them deserve a mention:
 - **Willow Narrows** has a stock safe capacity of **16 balls in flight**, raised to the full
   34 by the Willow Exit Flare. This is what makes the Narrows a genuine bottleneck under
   several upstream factories.
-- **Progression pace** is about 25–30 minutes per new reach for a simple player who starts
-  from an Upper Gorge save.
+- **Progression pace** is about 25–40 minutes per new reach for a simple player who starts
+  from an Upper Gorge save, about 3.6 hours to the first Headwaters finish.
 
 Placements marked `PROVISIONAL` (in `creek.js` and `render/expansion.js`) are approximate,
 compressed to game scale and labelled "approx." on the map:
@@ -160,7 +160,12 @@ Geography reconciliation:
 - **7. Canon checks.** See the playtest output for the full list.
 - **8. Traversal.** A first-person traversal with the real walker, from a factory to the
   Farlands entrance.
-- **9. Progression.** From an Upper Gorge save with no debug money; see the result below.
+- **9. Progression.** From an Upper Gorge save with no debug money, a simple buyer bot
+  opened Slate at 24 min, Willow 47, Splitstone 72, Long Eddy 101, Spillway 131, Sluice 169
+  and the Headwaters at 211. The first Headwaters finish came at 217 min. The next purchase
+  was visible at every check, and short runs kept paying.
+
+Total: 69 checks passed, 0 failed.
 
 **Browser (Chromium via Playwright, software GL).**
 
