@@ -6,7 +6,7 @@ import { STARTS } from '../core/config.js';
 import { SWEEPERS, WORKSHOP } from '../core/game.js';
 import { MATS, mats, box, cyl, rod, obbMesh, capsuleMesh, sprite } from './equipment.js';
 import { labelTexture } from './textures.js';
-import { mulberry32 } from '../core/noise.js';
+import { mulberry32, fbm } from '../core/noise.js';
 
 const V = (a) => new THREE.Vector3(a[0], a[1], a[2]);
 
@@ -15,26 +15,27 @@ export const NEW_SPOTS = {
   slateBumpers: [-12.2, 1], slateOutlet: [-7.9, 1], leafGrate: [-14.75, -1], willowShield: [-26.1, 1], willowFlare: [-22.9, -1],
   splitGate: [-51.6, 1], splitMergeRail: [-40.8, 1], basinBoom: [-69, 1], basinVane: [-65.6, 1], spillApron: [-90.2, 1],
   spillSkimmer: [-87.8, 1], sluiceAlternator: [-121.4, 1], sluiceMerge: [-108.4, 1], headGuide: [-146.5, -1], headRails: [-134.2, 1],
-  draftRibbon: [77.4, -1], windScreen: [76.2, -1], springsSampler: [58.2, -1], habitatBypass: [57.3, 1], branchSweeper: [47.4, -1],
+  draftRibbon: [327.4, -1], windScreen: [326.2, -1], springsSampler: [58.2, -1, 'springs'], habitatBypass: [57.3, 1, 'springs'], branchSweeper: [47.4, -1],
 };
 
 /** Historical / field-note landmarks and their game placement status. */
 // PROVISIONAL: every mapped landmark below is an approximate placement in game coordinates;
 // unmapped landmarks have no position on purpose.
 export function landmarkPlacements(cr) {
-  const P = (s, dOff, side = 0) => { const d = cr.c(s) + dOff; const p = cr.worldXZ(s, d); return { s, d, x: p.x, y: Math.max(cr.bedH(s, d), cr.y0(s)), z: p.z }; };
+  const P = (s, dOff, ch = cr) => { const d = ch.c(s) + dOff; const p = ch.worldXZ(s, d); return { s, d, ch: ch.kind, x: p.x, y: Math.max(ch.bedH(s, d), ch.y0(s)), z: p.z }; };
+  const sp = cr.springs || cr;
   return [
-    { id: 'waterfallZone', name: 'Waterfall Zone', layer: 'field', ...P(86.0, 1.2), note: 'Historical area label at the falls. Waterfall Run is the game launch above it.' },
-    { id: 'split', name: 'Route split', layer: 'field', ...P(83.4, 0.6), note: 'The creek-right branch is the primary waterfall route; the alternate route steps down on the creek-left. Approximate.' },
-    { id: 'tapedSign', name: 'Taped sign (about 20 ft upstream of the split)', layer: 'field', ...P(81.6, -0.7), note: 'Field sign on a fallen trunk. In game scale it stands about 1.8 m upstream of the split. Camera pin C (photo viewpoint) is a separate concept.' },
-    { id: 'falls', name: 'Falls (primary route)', layer: 'field', ...P(86.0, -0.4), note: 'The falls sit farther down the primary route, at the creator’s red marks. Approximate.' },
-    { id: 'shelf', name: 'Continental Shelf', layer: 'field', ...P(72.0, 0.6), note: 'Ledge along the creek’s right side near the waterfall. Hidden portions are approximate.' },
-    { id: 'shelfClimb', name: 'Brushy opening and Shelf climb', layer: 'field', ...P(66.8, 1.4), note: 'Approach the brushy opening, then climb the Shelf to the Springs (photo IMG_8183). Placement compressed to game scale.' },
-    { id: 'springsPonds', name: 'Crawfish Springs double ponds', layer: 'field', ...P(57.7, 1.8), note: 'Secondary runoff chute off the main creek with a large double-pond spring and crawfish. Pond edges in game are illustrative, not surveyed.' },
-    { id: 'flatRocks', name: 'Flat Rocks (usual historical start)', layer: 'field', ...P(73.6, 0.7), note: 'Broad slabs with an undercut. Game placement approximate.' },
-    { id: 'clearing', name: 'The Clearing and deep pools', layer: 'field', ...P(52.3, -0.5), note: 'Open reach where Nigatron, a large water bug, was found while carrying race balls upstream.' },
-    { id: 'farlands', name: 'Farlands entrance', layer: 'field', ...P(50.2, 0), note: 'Entry marker, not a boundary. The Farlands continue upstream; only one or two expeditions have gone in.' },
-    { id: 'finish', name: 'Regular finish (trail entrance)', layer: 'field', ...P(98.5, 0.6), note: 'Provisional game placement. Historical coordinates stay unset until the creator shares an anchor.' },
+    { id: 'waterfallZone', name: 'Waterfall Zone', layer: 'field', ...P(451.6, 1.2), note: 'Historical area label at the falls. Waterfall Run is the game launch above the split.' },
+    { id: 'split', name: 'Route split', layer: 'field', ...P(417.6, 0.6), note: 'The creek-right branch is the primary waterfall route; the alternate branch leaves on the creek-left (east) and rejoins below the falls. Placed from the creator’s map.' },
+    { id: 'tapedSign', name: 'Taped sign (about 20 ft upstream of the split)', layer: 'field', ...P(414.4, -0.7), note: 'Field sign on a fallen trunk, about 20 ft (3 m at the game’s half scale) upstream of the split. Camera pin C (photo viewpoint) is a separate concept.' },
+    { id: 'falls', name: 'Falls (primary route)', layer: 'field', ...P(450.8, -0.4), note: 'The falls sit farther down the primary route, at the creator’s red marks, about 67 m below the split on the map.' },
+    { id: 'shelf', name: 'Continental Shelf', layer: 'field', ...P(230, -2.4), note: 'The rock terrace along the creek’s east bank (on your right walking upstream), from the Springs climb all the way up to the deep pools.' },
+    { id: 'shelfClimb', name: 'Brushy opening and Shelf climb', layer: 'field', ...P(512, -1.9), note: 'Across from photo pin A: the brushy opening where you climb the Shelf to reach the Springs runoff chute and the double ponds (IMG_8183).' },
+    { id: 'springsPonds', name: 'Crawfish Springs double ponds', layer: 'field', ...P(57.7, 1.8, sp), note: 'A secondary stream: the large double-pond spring in the deep forest on the Shelf, with crawfish. Its runoff chute joins the creek below the falls. Pond edges are illustrative, not surveyed.' },
+    { id: 'flatRocks', name: 'Flat Rocks (usual historical start)', layer: 'field', ...P(142.8, 4.7), note: 'The big flat rocks: a thick sandstone ledge overhanging a dark undercut on the west bank, with a cobble bar and shallow water below (creator’s photo). About 270 m (map: 500 m) above the route split.' },
+    { id: 'clearing', name: 'The Clearing and deep pools', layer: 'field', ...P(98.3, -0.5), note: 'Open reach where Nigatron, a large water bug, was found while carrying race balls upstream. Grass on the west side, the wooded Shelf to the east.' },
+    { id: 'farlands', name: 'Farlands entrance', layer: 'field', ...P(33.5, 0), note: 'Entry marker, not a boundary, just above the deep pools where the Shelf ends. The Farlands continue upstream; only one or two expeditions have gone in.' },
+    { id: 'finish', name: 'Regular finish (trail entrance)', layer: 'field', ...P(555, 0.6), note: 'Provisional game placement. Historical coordinates stay unset until the creator shares an anchor.' },
     // known names with no supported location: listed, never placed
     { id: 'norwayCavern', name: 'Norway Cavern', layer: 'field', unmapped: true, note: 'Site of the cut-branch extraction during the Great 300-Ball Race. Location not established.' },
     { id: 'crayfishPond', name: 'Crayfish Pond', layer: 'field', unmapped: true, note: 'A hawk was seen here during the 300-ball race. Separate from Crawfish Springs. Location not established.' },
@@ -52,9 +53,10 @@ export class Expansion {
     this.items = {};
     this.stakes = {};
     const cr = creek, cols = creek.colliders;
+    const spr = creek.springs || creek;
     const groupMeshes = (group, mat) => {
       const g = new THREE.Group();
-      for (const c of cols) {
+      for (const c of [...cols, ...(creek.springs ? creek.springs.colliders : [])]) {
         if (c.group !== group) continue;
         if (c.type === 1) g.add(capsuleMesh(c, mat));
         else if (c.type === 2) g.add(obbMesh(c, mat));
@@ -154,6 +156,7 @@ export class Expansion {
       if (S.id === 'arm') continue;
       const g = new THREE.Group();
       const s = S.pivotS;
+      const cr = S.cr ? spr : creek;
       const c = cr.c(s);
       const d = c + S.side * ((S.side < 0 ? cr.wL(s) : cr.wR(s)) + 0.25);
       const p = cr.worldXZ(s, d);
@@ -180,7 +183,7 @@ export class Expansion {
     // Lore gadgets at the Shelf and the Springs
     {
       const g = new THREE.Group();
-      const s = 77.4, d = 1.15;
+      const s = 327.4, d = 1.15;
       const p = cr.worldXZ(s, d);
       const y = cr.bedH(s, d);
       g.position.set(p.x, y, p.z);
@@ -196,7 +199,7 @@ export class Expansion {
     }
     {
       const g = new THREE.Group();
-      const pts = [[75.6, 1.25], [76.6, 1.15], [77.6, 1.2]].map(([s, d]) => { const p = cr.worldXZ(s, d); return new THREE.Vector3(p.x, cr.y0(s) + 0.05, p.z); });
+      const pts = [[325.6, 1.25], [326.6, 1.15], [327.6, 1.2]].map(([s, d]) => { const p = cr.worldXZ(s, d); return new THREE.Vector3(p.x, cr.y0(s) + 0.05, p.z); });
       for (let i = 0; i < pts.length - 1; i++) {
         const a = pts[i], b = pts[i + 1];
         const pnl = new THREE.Mesh(new THREE.PlaneGeometry(a.distanceTo(b), 0.7), MATS.mesh);
@@ -209,6 +212,7 @@ export class Expansion {
     }
     {
       const g = new THREE.Group();
+      const cr = spr;
       const s = 58.2, d = cr.c(58.2) - cr.wL(58.2) - 0.35;
       const p = cr.worldXZ(s, d);
       g.position.set(p.x, cr.bedH(s, d), p.z);
@@ -219,7 +223,8 @@ export class Expansion {
       add('springsSampler', g);
     }
     // ---- for-sale stakes for the new equipment
-    for (const [id, [s, side]] of Object.entries(NEW_SPOTS)) {
+    for (const [id, [s, side, ch]] of Object.entries(NEW_SPOTS)) {
+      const cr = ch ? spr : creek;
       const c = cr.c(s);
       const d = c + side * ((side < 0 ? cr.wL(s) : cr.wR(s)) + 0.4);
       const p = cr.worldXZ(s, d);
@@ -238,7 +243,7 @@ export class Expansion {
     // ---- Bank Workshop yard and carts
     {
       const s = WORKSHOP.s;
-      const d = cr.c(s) - cr.wL(s) - 1.7;
+      const d = cr.c(s) + cr.wR(s) + 1.7;
       const p = cr.worldXZ(s, d);
       const y = cr.bedH(s, d);
       const g = new THREE.Group();
@@ -258,6 +263,7 @@ export class Expansion {
     this.carts = [];
     // ---- Code Rot observations: dark patchy deposits (a simulated condition layer)
     {
+      const cr = spr;
       const rnd = mulberry32(31);
       const geo = new THREE.CircleGeometry(1, 9);
       geo.rotateX(-Math.PI / 2);
@@ -287,6 +293,7 @@ export class Expansion {
     // ---- crayfish in the double ponds (few, the habitat is affected)
     {
       this.crayfish = [];
+      const cr = spr;
       const mat = new THREE.MeshStandardMaterial({ color: 0x8a3a22, roughness: 0.6 });
       for (const [i, pd] of cr.ponds.entries()) {
         for (let k = 0; k < (i === 0 ? 2 : 1); k++) {
@@ -314,7 +321,7 @@ export class Expansion {
     }
     // ---- signs: taped sign on a fallen trunk, the Farlands entrance, map boards
     {
-      const s = 81.6, d = cr.c(81.6) - 0.75;
+      const s = 414.4, d = cr.c(414.4) - 0.75;
       const p = cr.worldXZ(s, d);
       const y = cr.bedH(s, d);
       const g = new THREE.Group();
@@ -332,7 +339,7 @@ export class Expansion {
       this.tapedSign = g;
     }
     {
-      const s = 50.2;
+      const s = 33.5;
       const a = cr.worldXZ(s, cr.c(s) - 1.6), b = cr.worldXZ(s, cr.c(s) + 1.6);
       const y = cr.y0(s) + 0.02;
       const line = rod([a.x, y, a.z], [b.x, y, b.z], 0.012, new THREE.MeshBasicMaterial({ color: 0xf2d230 }), 6);
@@ -349,7 +356,8 @@ export class Expansion {
     // map boards beside every launch site and the finish
     this.boards = [];
     const boardTex = labelTexture(['MAP', 'press M'], { w: 256, h: 160, font: 'bold 46px Georgia, serif', bg: '#1f3326', border: '#e8d27a' });
-    const placeBoard = (s, dOff, id) => {
+    const placeBoard = (s, dOff, id, ch = creek) => {
+      const cr = ch;
       const d = cr.c(s) + dOff;
       const p = cr.worldXZ(s, d);
       const g = new THREE.Group();
@@ -362,9 +370,77 @@ export class Expansion {
       scene.add(g);
       this.boards.push({ id, g, pos: g.position.clone() });
     };
-    STARTS.forEach((st, k) => placeBoard(st.s - 1.9, cr.wR(st.s) + 1.1, 'site' + k));
-    placeBoard(97.6, -0.95, 'finish');
+    STARTS.forEach((st, k) => { const ch = st.cr ? spr : creek, s = ch.siteS(st); placeBoard(s - 1.9, ch.wR(s) + 1.1, 'site' + k, ch); });
+    placeBoard(554.1, -0.95, 'finish');
     this.landmarks = landmarkPlacements(cr);
+    if (cr.ledge) this.buildFlatRocks(cr);
+  }
+
+  /** The Flat Rocks ledge lip that overhangs the undercut (the heightfield cannot), a thin
+   *  inner slab inside the recess, and the taped race signs (creator's ground photo). */
+  buildFlatRocks(cr) {
+    const lg = cr.ledge;
+    const pos = [], col = [], idx = [];
+    const tmpC = new THREE.Color();
+    const sand = (y) => { const b = 0.5 + 0.5 * Math.sin(y * 21); tmpC.setRGB(0.8 + 0.1 * b, 0.68 + 0.09 * b, 0.5 + 0.07 * b, THREE.SRGBColorSpace); return [tmpC.r, tmpC.g, tmpC.b]; };
+    const strip = (s0, s1, frontOf, yTop, thick, backOf) => {
+      const base = pos.length / 3;
+      const ring = 6;
+      let rows = 0;
+      for (let s = s0; s <= s1 + 1e-6; s += 0.18) {
+        const t = (s - s0) / (s1 - s0);
+        const taper = Math.min(1, Math.sin(Math.PI * t) * 2.2);
+        const edge = cr.c(s) + cr.wR(s);
+        const fr = frontOf(s), bk = backOf(s), yt = yTop(s), th = thick * (0.55 + 0.45 * taper);
+        const y0 = cr.y0(s);
+        // cross-section: back top, front top, rounded nose, front bottom, sloping underside, back bottom
+        const sec = [[bk, yt], [fr + 0.04, yt], [fr - 0.02, yt - th * 0.35], [fr + 0.03, yt - th], [fr + 0.35, yt - th * 1.08], [bk, yt - th * 1.2]];
+        for (const [dd, yy] of sec) {
+          const p = cr.worldXZ(s, edge + dd);
+          pos.push(p.x, y0 + yy, p.z);
+          const c3 = sand(yy); col.push(...c3);
+        }
+        rows++;
+      }
+      for (let r = 0; r < rows - 1; r++) for (let k = 0; k < ring - 1; k++) {
+        const a = base + r * ring + k, b = a + 1, c2 = a + ring, d2 = c2 + 1;
+        idx.push(a, c2, b, b, c2, d2);
+      }
+      // end caps
+      for (const r of [0, rows - 1]) { const a = base + r * ring; for (let k = 1; k < ring - 1; k++) r === 0 ? idx.push(a, a + k, a + k + 1) : idx.push(a, a + k + 1, a + k); }
+    };
+    const n = (s, k) => fbm(s * 1.9, k, 2, 71);
+    // the big lip: its front sits at the bar edge, its back is buried in the ledge
+    strip(lg.s0 + 0.15, lg.s1 - 0.15, (s) => lg.bar - 0.05 + 0.18 * n(s, 1), (s) => lg.h + 0.02 + 0.04 * n(s, 2), 0.7, (s) => cr.ledgeWall(s) + 0.5);
+    // a thinner slab inside the dark recess
+    const a0 = lg.s0 + (lg.s1 - lg.s0) * 0.45, a1 = lg.s1 - 0.5;
+    strip(a0, a1, (s) => lg.bar + 0.35 + 0.12 * n(s, 3), () => 0.62, 0.16, (s) => cr.ledgeWall(s) + 0.2);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true, side: THREE.DoubleSide }));
+    m.castShadow = true; m.receiveShadow = true;
+    this.scene.add(m);
+    this.flatRocks = m;
+    // taped laminated race signs on the ledge face, and blue tape draped over the top
+    const signMat = new THREE.MeshStandardMaterial({ color: 0x1d2127, roughness: 0.35, metalness: 0.1 });
+    const tape = new THREE.MeshStandardMaterial({ color: 0x8fb8ff, roughness: 0.6 });
+    for (const [fs, dy] of [[0.42, -0.2], [0.62, 0.05]]) {
+      const s = lg.s0 + (lg.s1 - lg.s0) * fs;
+      const edge = cr.c(s) + cr.wR(s);
+      const p = cr.worldXZ(s, edge + lg.bar - 0.08);
+      const fr = cr.frame(s);
+      const sg = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.2), signMat);
+      sg.position.set(p.x, cr.y0(s) + lg.h - 0.45 + dy, p.z);
+      sg.rotation.y = Math.atan2(-fr.nx, -fr.nz);
+      this.scene.add(sg);
+      const t1 = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.8, 0.004), tape);
+      t1.position.set(p.x, cr.y0(s) + lg.h - 0.2, p.z);
+      t1.rotation.set(0.5, Math.atan2(-fr.nx, -fr.nz), 0.4);
+      this.scene.add(t1);
+    }
   }
 
   configure(game) {
@@ -415,8 +491,8 @@ export class Expansion {
       const cart = W.carts[i];
       if (!cart || !game.owned.has('bankWorkshop')) { C.g.visible = false; return; }
       C.g.visible = true;
-      const s = Math.max(-151, Math.min(106, cart.s));
-      const d = cr.c(s) - cr.wL(s) - 1.15 - (i % 2) * 0.35;
+      const s = Math.max(cr.sMin + 1, Math.min(cr.sMax - 2, cart.s));
+      const d = cr.c(s) + cr.wR(s) + 1.15 + (i % 2) * 0.35;
       const p = cr.worldXZ(s, d);
       C.g.position.set(p.x, cr.bedH(s, d), p.z);
       const fr = cr.frame(s);
@@ -426,6 +502,7 @@ export class Expansion {
     });
     // crayfish creep around the pond floor
     for (const cf of this.crayfish) {
+      const cr = this.creek.springs || this.creek;
       const { pd, ph, r } = cf.userData;
       const a = t * 0.12 + ph;
       const s = pd.s + Math.cos(a) * pd.rs * r, d = cr.c(pd.s) + pd.dOff + Math.sin(a) * pd.rd * r;
@@ -437,8 +514,8 @@ export class Expansion {
     if (this.nigatron) {
       const k = Math.floor(t / 3), f = (t % 3) / 3;
       const rr = (n) => { const x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); };
-      const s0 = 52.3 + (rr(k) - 0.5) * 1.4, d0 = -0.5 + (rr(k + 7) - 0.5) * 0.6;
-      const s1 = 52.3 + (rr(k + 1) - 0.5) * 1.4, d1 = -0.5 + (rr(k + 8) - 0.5) * 0.6;
+      const s0 = 98.3 + (rr(k) - 0.5) * 1.4, d0 = -0.5 + (rr(k + 7) - 0.5) * 0.6;
+      const s1 = 98.3 + (rr(k + 1) - 0.5) * 1.4, d1 = -0.5 + (rr(k + 8) - 0.5) * 0.6;
       const e = f < 0.3 ? (f / 0.3) * (f / 0.3) * (3 - 2 * f / 0.3) : 1;
       const s = s0 + (s1 - s0) * e, d = cr.c(s) + d0 + (d1 - d0) * e;
       const p = cr.worldXZ(s, d);

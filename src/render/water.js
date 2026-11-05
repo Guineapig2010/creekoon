@@ -1,14 +1,13 @@
 // Creek water surface, waterfall sheets.
 import * as THREE from 'three';
-import { S_MIN, S_MAX, STEPS } from '../core/creek.js';
 import { waterNormalTexture, streakTexture, foamTexture } from './textures.js';
 import { splitRows } from './terrain.js';
 
 function extraWaterGeos(creek) {
   const geos = [];
   const fl = {}, fr = {}, p = {};
-  // alternate cascade route
-  {
+  // alternate cascade route (main creek only)
+  if (creek.alt.s1 > creek.sMin) {
     const a = creek.alt, nU = 8, ds = 0.06;
     const pos = [], depth = [], flow = [], foam = [], idx = [];
     let rows = 0;
@@ -29,6 +28,28 @@ function extraWaterGeos(creek) {
       rows++;
     }
     for (let i = 0; i < rows - 1; i++) for (let j = 0; j < nU - 1; j++) { const q = i * nU + j; idx.push(q, q + 1, q + nU, q + 1, q + nU + 1, q + nU); }
+    geos.push(makeWaterGeo(pos, depth, flow, foam, idx));
+  }
+  // the Springs stream's gully into the creek
+  if (creek.gully) {
+    const g = creek.gully, nU = 8, steps = Math.ceil(Math.hypot(g.sB - g.sA, g.dB - g.dA) / 0.06);
+    const pos = [], depth = [], flow = [], foam = [], idx = [];
+    const es = g.sB - g.sA, ed = g.dB - g.dA, l = Math.hypot(es, ed), ns = -ed / l, nd = es / l;
+    const q = {};
+    for (let i = 0; i <= steps; i++) {
+      creek.gullyAt(i / steps, q);
+      creek.frame(q.s, fr);
+      for (let j = 0; j < nU; j++) {
+        const u = -1.05 + (2.1 * j) / (nU - 1);
+        const s2 = q.s + ns * u * g.w, d2 = q.d + nd * u * g.w;
+        creek.worldXZ(s2, d2, p);
+        pos.push(p.x, q.y + 0.003, p.z);
+        depth.push(Math.max(0, q.y - creek.bedH(s2, d2)));
+        creek.flowAt(s2, d2, q.y, 0, fr.tx, fr.tz, fl);
+        flow.push(fl.vx, fl.vz); foam.push(0.25);
+      }
+    }
+    for (let i = 0; i < steps; i++) for (let j = 0; j < nU - 1; j++) { const k = i * nU + j; idx.push(k, k + 1, k + nU, k + 1, k + nU + 1, k + nU); }
     geos.push(makeWaterGeo(pos, depth, flow, foam, idx));
   }
   // double ponds (still water, a ring of vertices)
@@ -153,9 +174,10 @@ const waterFrag = /* glsl */`
   }
 `;
 
-export function buildWater(creek, quality, sunDir) {
-  const ds = quality === 'low' ? 0.12 : 0.06;
-  const nU = quality === 'low' ? 12 : 22;
+export function buildWater(creek, quality, sunDir, sharedMat = null) {
+  const S_MIN = creek.sMin, S_MAX = creek.sMax;
+  const ds = quality === 'low' ? 0.16 : 0.11;
+  const nU = quality === 'low' ? 10 : 16;
   const nS = Math.floor((S_MAX - S_MIN) / ds) + 1;
   const pos = new Float32Array(nS * nU * 3);
   const depth = new Float32Array(nS * nU), foam = new Float32Array(nS * nU), flow = new Float32Array(nS * nU * 2);
@@ -218,12 +240,12 @@ export function buildWater(creek, quality, sunDir) {
   uniforms.uNormal.value = waterNormalTexture();
   uniforms.uFoamTex.value = foamTexture(128);
   uniforms.uFoamTex.value.wrapS = uniforms.uFoamTex.value.wrapT = THREE.RepeatWrapping;
-  const mat = new THREE.ShaderMaterial({
+  const mat = sharedMat || new THREE.ShaderMaterial({
     vertexShader: waterVert, fragmentShader: waterFrag, uniforms, transparent: true, depthWrite: false, fog: true,
   });
   const mesh = new THREE.Group();
   mesh.material = mat;
-  for (const g of splitRows(geo, nS, nU, Math.round(10 / ds))) { const m = new THREE.Mesh(g, mat); m.renderOrder = 2; mesh.add(m); }
+  for (const g of splitRows(geo, nS, nU, Math.round(20 / ds))) { const m = new THREE.Mesh(g, mat); m.renderOrder = 2; mesh.add(m); }
   // the alternate route at the waterfall split, the Springs double ponds and their runoff
   for (const g of extraWaterGeos(creek)) { const m = new THREE.Mesh(g, mat); m.renderOrder = 2; mesh.add(m); }
   mesh.name = 'water';
@@ -273,7 +295,7 @@ export function buildFalls(creek) {
   const mat = new THREE.ShaderMaterial({ vertexShader: fallVert, fragmentShader: fallFrag, uniforms, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: true });
   const p = {};
   const sheets = [];
-  for (const st of STEPS) {
+  for (const st of creek.STEPS) {
     const sTop = st.s - st.len / 2 - 0.01;
     const yTop = creek.y0(sTop - 0.02);
     const yBot = creek.y0(st.s + 0.6);

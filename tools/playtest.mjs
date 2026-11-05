@@ -127,14 +127,17 @@ if (want(1)) {
     const wantOpen = OLD.slice(0, d.unlocked);
     const siteOwned = [...g.sites[sk].owned], globalOwned = [...g.owned];
     const allOwned = new Set([...siteOwned, ...globalOwned]);
-    const oldRolling = d.balls.filter((b) => b.st === 'roll');
-    const newRolling = g.phys.balls.filter((b) => b.state === 'roll');
-    const posOk = oldRolling.every((o) => { const b = g.phys.balls.find((x) => x.id === o.id); return b && Math.hypot(b.x - o.x, b.z - o.z) < 1e-6 && b.start === K[OLD[o.k]] && b.payout === o.pay && b.paid === o.paid; });
-    const otherQueues = g.sites.every((s, k) => k === sk || (!s.hopper.length && !s.post.length));
+    // the creek was re-laid along the creator's map: unpaid rolling balls cannot keep their old
+    // positions, so each goes back to the front of its own factory's queue with its ID kept
+    const oldRolling = d.balls.filter((b) => b.st === 'roll' && !b.paid);
+    const queued = new Map();
+    g.sites.forEach((s2) => { for (const it of s2.hopper) queued.set(it.id, s2.id); });
+    const backOk = oldRolling.every((o) => queued.get(o.id) === OLD[o.k]);
+    const queueTotal = g.sites.reduce((a, s2) => a + s2.hopper.length + s2.post.length, 0);
     ok(g.cash === d.cash && JSON.stringify(openIds.sort()) === JSON.stringify(wantOpen.slice().sort())
-      && d.owned.every((id) => allOwned.has(id)) && g.sites[sk].hopper.length === (d.hopper || []).length && otherQueues
-      && newRolling.length === oldRolling.length && posOk && g.stats.paid === d.stats.paid,
-      `${name.padEnd(8)} cash $${d.cash} kept · open ${openIds.join('/')} · ${d.owned.length} machines kept (line at ${selId}) · hopper ${(d.hopper || []).length} → ${STARTS[sk].name} only · ${oldRolling.length} rolling balls restored in place with origin and payout · paid finishes $${d.stats.paid}`);
+      && d.owned.every((id) => allOwned.has(id)) && queueTotal === (d.hopper || []).length + oldRolling.length && backOk
+      && g.phys.balls.length === 0 && g.stats.paid === d.stats.paid,
+      `${name.padEnd(8)} cash $${d.cash} kept · open ${openIds.join('/')} · ${d.owned.length} machines kept (line at ${selId}) · old queue ${(d.hopper || []).length} kept · ${oldRolling.length} unpaid rolling balls returned to their own factory queues (IDs kept) · paid finishes $${d.stats.paid}`);
     // other previously open sites get a basic line when the old line had one
     const basic = wantOpen.filter((id) => id !== selId).every((id) => !d.owned.includes('press') || g.sites[K[id]].owned.has('press'));
     ok(basic, `${name.padEnd(8)} previously unlocked sites keep a basic line (press/feeder installed where the old line had them)`);
@@ -143,7 +146,7 @@ if (want(1)) {
     const ordersOk = ORDERS.find((o) => o.id === 'dry') && g.orderOpen(ORDERS.find((o) => o.id === 'dry')) === sp;
     const wsOk = (g.canBuy('bankWorkshop').why !== `Requires ${STARTS[K.alder].name}`) === al;
     const flowOk = (g.canBuy('flowMonitor').why !== `Requires ${STARTS[K.shelf].name}`) === g.isOpen('shelf');
-    ok(ordersOk && wsOk && flowOk && g.unlockable(K.flatrocks) === g.isOpen('waterfall') && (name !== 'finished' || g.unlockable(K.slate)),
+    ok(ordersOk && wsOk && flowOk && g.unlockable(K.flatrocks) === g.isOpen('shelf') && (name !== 'finished' || g.unlockable(K.slate)),
       `${name.padEnd(8)} new controls appear at the right milestones (orders ${sp ? 'open' : 'locked'}, Bank Workshop ${al ? 'available' : 'locked'}, Flow Monitor ${g.isOpen('shelf') ? 'available' : 'locked'}${name === 'finished' ? ', Slate Steps for sale' : ''})`);
     // the migrated save keeps working: every old ball pays at most once, books balance after a run
     const paid = new Set(g.phys.balls.filter((b) => b.paid).map((b) => b.id));
@@ -159,7 +162,7 @@ if (want(1)) {
 // ================================================================= 2. geography
 if (want(2)) {
   head('2. Connected geography: every new launch reaches the original finish and pays once');
-  const NEW = ['flatrocks', 'slate', 'willow', 'splitstone', 'longeddy', 'spillway', 'sluice', 'coldspring'];
+  const NEW = ['springs', 'flatrocks', 'slate', 'willow', 'splitstone', 'longeddy', 'spillway', 'sluice', 'coldspring'];
   const lanes = { alt: 0, main: 0, splitDirect: 0, splitCalm: 0, sluiceL: 0, sluiceR: 0 };
   const isl = creek.islands.find((i) => i.name === 'Splitstone'), rib = creek.islands.find((i) => i.name === 'Sluice rib');
   for (const id of NEW) {
@@ -182,7 +185,8 @@ if (want(2)) {
       for (const b of g2.phys.balls) {
         if (b.state !== 'roll') continue;
         const L = laneOf.get(b.id) || {};
-        if (creek.channelOf(b.s, b.d, 0) === 'alt') L.alt = true;
+        if (!b.cr && creek.channelOf(b.s, b.d, 0) === 'alt') L.alt = true;
+        if (b.cr) L.stream = true;
         if (b.s > isl.s0 + 1 && b.s < isl.s1 - 1) L.split = b.d < creek.c(b.s) + isl.dOff ? 'L' : 'R';
         if (b.s > rib.s0 + 1 && b.s < rib.s1 - 1) L.sluice = b.d < creek.c(b.s) + rib.dOff ? 'L' : 'R';
         laneOf.set(b.id, L);
@@ -195,21 +199,41 @@ if (want(2)) {
     const allCps = finished.every((x) => { const c = cps.get(x) || []; return expect.every((s) => c.includes(s)); });
     for (const x of finished) {
       const L = laneOf.get(x) || {};
-      if (STARTS[k].s < 80.7) { if (L.alt) lanes.alt++; else lanes.main++; }
+      if (!STARTS[k].cr && STARTS[k].s < creek.alt.s0) { if (L.alt) lanes.alt++; else lanes.main++; }
       if (L.split === 'L') lanes.splitDirect++; else if (L.split === 'R') lanes.splitCalm++;
       if (L.sluice === 'L') lanes.sluiceL++; else if (L.sluice === 'R') lanes.sluiceR++;
     }
-    ok(finished.length >= n - 1 && once && allCps && g.cash - cashBefore === sumPaid && sumPaid === finished.length * STARTS[k].base,
-      `${STARTS[k].name.padEnd(22)} ${finished.length}/${ids.length} balls reached the gate, ${expect.length} checkpoints each (launches upstream + merges), paid $${STARTS[k].base} exactly once; cash moved only on finishes`);
+    const viaStream = !STARTS[k].cr || finished.every((x) => (laneOf.get(x) || {}).stream);
+    ok(finished.length >= n - 1 && once && allCps && viaStream && g.cash - cashBefore === sumPaid && sumPaid === finished.length * STARTS[k].base,
+      `${STARTS[k].name.padEnd(22)} ${finished.length}/${ids.length} balls reached the gate${STARTS[k].cr ? ' (down the runoff stream and into the creek at the confluence)' : ''}, ${expect.length} checkpoints each (launches upstream + merges), paid $${STARTS[k].base} exactly once; cash moved only on finishes`);
   }
   ok(lanes.alt > 0 && lanes.main > 0, `waterfall split: both branches used and both pay (${lanes.main} over the falls on creek-right, ${lanes.alt} down the alternate route)`);
-  ok(lanes.splitDirect > 0 && lanes.splitCalm > 0, `Splitstone Fork: both lanes used and they merge before the next checkpoint (${lanes.splitDirect} / ${lanes.splitCalm})`);
+  {
+    const g2 = fresh();
+    openTo(g2, K.splitstone);
+    give(g2, 0, ['splitGate']);
+    g2.splitGate = 'balanced';
+    const lane = new Map(), paid = new Map(), merged = new Set();
+    let n = 0;
+    run(g2, 200, (e) => { if (e.type === 'finish') paid.set(e.id, (paid.get(e.id) || 0) + 1); }, (gg, i) => {
+      if (n < 8 && gg.sites[K.splitstone].manualCD <= 0 && gg.t > n * 4) { gg.manualRoll(K.splitstone); n++; }
+      if (i % 6) return;
+      for (const b of gg.phys.balls) {
+        if (b.state === 'roll' && b.s > isl.s0 + 1 && b.s < isl.s1 - 1) lane.set(b.id, b.d < creek.c(b.s) + isl.dOff ? 'L' : 'R');
+        if (b.state === 'roll' && lane.has(b.id) && b.s > -38) merged.add(b.id);
+      }
+    });
+    const L = [...lane.values()].filter((x) => x === 'L').length, R = [...lane.values()].filter((x) => x === 'R').length;
+    const allPassed = [...lane.keys()].filter((id) => merged.has(id)).length;
+    const twice = [...paid.values()].some((v) => v > 1);
+    ok(L > 0 && R > 0 && allPassed >= lane.size - 1 && !twice, `Splitstone Fork: with the gate on Balanced both lanes carry balls (${L} east / ${R} west; the stock fork sends ${lanes.splitDirect} / ${lanes.splitCalm}); ${allPassed}/${lane.size} came back together past the merge; none paid twice`);
+  }
   ok(lanes.sluiceL + lanes.sluiceR > 0, `Boulder Sluice rib passed on both sides over the run (${lanes.sluiceL} left / ${lanes.sluiceR} right)`);
   // a reach marker / checkpoint pays nothing by itself
   const g = fresh();
   openTo(g, K.alder);
   let cpCash = 0;
-  run(g, 25, (e, g2) => { if (e.type === 'checkpoint') cpCash += 0; }, (g2) => { if (g2.t < 1) g2.manualRoll(K.alder); });
+  run(g, 80, (e, g2) => { if (e.type === 'checkpoint') cpCash += 0; }, (g2) => { if (g2.t < 1) g2.manualRoll(K.alder); });
   const b = g.phys.balls.find((x) => x.state === 'roll');
   ok(g.cash === 0 && b && b.cpi > 0, `a ball passing ${b?.cpi} checkpoints and reach markers earns nothing until the finish gate (cash still $${g.cash})`);
 }
@@ -224,13 +248,13 @@ if (want(3)) {
   const owned0 = [...g.sites[0].owned].sort().join();
   const p0 = g.sites[0].pressCount;
   g.cash = 1e6;
-  g.unlock(K.waterfall); g.unlock(K.flatrocks);
+  g.unlock(K.waterfall); g.unlock(K.springs);
   const rollingAtOpen = g.ballsRolling();
   run(g, 30);
   ok([...g.sites[0].owned].sort().join() === owned0 && g.sites[0].pressCount > p0 && g.sites[0].stats.launched > 0 && rollingAtOpen > 0,
     `opening two more factories while ${rollingAtOpen} balls rolled: the first line kept its ${owned0.split(',').length} machines and kept pressing (+${g.sites[0].pressCount - p0})`);
-  ok(g.sites[K.waterfall].owned.has('press') && g.sites[K.flatrocks].owned.has('feeder') && g.sites[K.flatrocks].stats.launched > 0,
-    `new sites came with their own basic line and launch on their own (${g.sites[K.waterfall].stats.launched} + ${g.sites[K.flatrocks].stats.launched} launches)`);
+  ok(g.sites[K.waterfall].owned.has('press') && g.sites[K.springs].owned.has('feeder') && g.sites[K.springs].stats.launched > 0,
+    `new sites came with their own basic line and launch on their own (${g.sites[K.waterfall].stats.launched} + ${g.sites[K.springs].stats.launched} launches)`);
   // transfers: Bank Workshop moving surplus between sites
   const w = fresh();
   w.cash = 1e7;
@@ -238,29 +262,30 @@ if (want(3)) {
   give(w, K.alder, ['press', 'feeder', 'quickMold', 'twinPress', 'hopperExt']);
   give(w, K.springs, ['press', 'feeder', 'lowFriction', 'indexed']);
   w.sites[K.alder].enabled.release = false; // Alder only manufactures: everything goes by cart
-  w.buy('bankWorkshop'); w.setRoute(0, K.springs);
+  give(w, K.flatrocks, ['press', 'feeder', 'lowFriction', 'indexed']);
+  w.buy('bankWorkshop'); w.setRoute(0, K.flatrocks);
   run(w, QUICK ? 150 : 240);
   const errs = reconcile(w);
-  const a = w.sites[K.alder].stats, sp = w.sites[K.springs].stats;
+  const a = w.sites[K.alder].stats, sp = w.sites[K.flatrocks].stats;
   ok(errs.length === 0 && a.transferredOut > 0 && sp.transferredIn > 0 && stageAudit(w).dup.length === 0,
-    `manufacture, transfers, launches, losses and finishes reconcile per site and network-wide (Alder made ${a.made}, carted out ${a.transferredOut}; Springs received ${sp.transferredIn}, launched ${sp.launched}; ${w.stats.finished} finished, ${w.stats.lost} lost)${errs.length ? ' — ' + errs.join('; ') : ''}`);
-  const transferred = w.phys.balls.concat([]).filter((b) => b.site === K.alder && b.start === K.springs);
-  ok(transferred.every((b) => b.recipe === 0) && w.recentLaunchesKeepOrigin !== false, `transferred balls keep their origin site and recipe (${transferred.length} in flight from Alder, launched at the Springs)`);
+    `manufacture, transfers, launches, losses and finishes reconcile per site and network-wide (Alder made ${a.made}, carted out ${a.transferredOut}; Flat Rocks received ${sp.transferredIn}, launched ${sp.launched}; ${w.stats.finished} finished, ${w.stats.lost} lost)${errs.length ? ' — ' + errs.join('; ') : ''}`);
+  const transferred = w.phys.balls.concat([]).filter((b) => b.site === K.alder && b.start === K.flatrocks);
+  ok(transferred.every((b) => b.recipe === 0) && w.recentLaunchesKeepOrigin !== false, `transferred balls keep their origin site and recipe (${transferred.length} in flight from Alder, launched at Flat Rocks)`);
   // pause and drain one full site while the others continue
   const d = fresh();
   d.cash = 1e6;
-  give(d, 0, FAST);
-  d.unlock(K.waterfall); d.unlock(K.flatrocks);
+  give(d, 0, [...FAST, 'wideBasket', 'conveyor', 'poweredBelt', 'overflowCrate']);
+  d.unlock(K.waterfall); d.unlock(K.springs);
   give(d, K.waterfall, ['quickMold', 'hopperExt']);
   d.sites[K.waterfall].enabled.feeder = false; // let it fill
   run(d, 40);
   const full = d.sites[K.waterfall].hopper.length;
   d.sites[K.waterfall].enabled.press = false; d.sites[K.waterfall].enabled.feeder = true; // drain
-  const o0 = d.sites[0].stats.made, f0 = d.sites[K.flatrocks].stats.made, m1 = d.sites[K.waterfall].stats.made;
+  const o0 = d.sites[0].stats.made, f0 = d.sites[K.springs].stats.made, m1 = d.sites[K.waterfall].stats.made;
   run(d, 120);
   if (d.sites[K.waterfall].hopper.length) console.log('    (drain status:', d.sites[K.waterfall].feederStatus, d.sites[K.waterfall].hopper.length, d.sites[K.waterfall].stats.launched, ')');
-  ok(full >= 8 && d.sites[K.waterfall].hopper.length === 0 && d.sites[K.waterfall].stats.made === m1 && d.sites[0].stats.made > o0 && d.sites[K.flatrocks].stats.made > f0,
-    `Waterfall Run drained its full ${full}-ball queue with its press paused while Old Rolling Grounds (+${d.sites[0].stats.made - o0}) and Flat Rocks (+${d.sites[K.flatrocks].stats.made - f0}) kept producing`);
+  ok(full >= 8 && d.sites[K.waterfall].hopper.length === 0 && d.sites[K.waterfall].stats.made === m1 && d.sites[0].stats.made > o0 && d.sites[K.springs].stats.made > f0,
+    `Waterfall Run drained its full ${full}-ball queue with its press paused while Old Rolling Grounds (+${d.sites[0].stats.made - o0}) and Crawfish Springs (+${d.sites[K.springs].stats.made - f0}) kept producing`);
   d.sites[K.waterfall].enabled.press = true; d.sites[K.waterfall].enabled.release = false;
   const l1 = d.sites[K.waterfall].stats.launched, l0 = d.sites[0].stats.launched;
   run(d, 30);
@@ -427,20 +452,33 @@ if (want(7)) {
   ok(unm.every((id) => byId[id] && byId[id].unmapped && byId[id].x === undefined), `unmapped landmarks stay unmapped (no world position): ${unm.join(', ')}`);
   const w = {};
   let down = true, upstream = false;
-  for (let s = 76.8; s < 79.5; s += 0.2) for (let d = 0.6; d < 2.6; d += 0.4) {
+  for (let s = 326.8; s < 329.5; s += 0.2) for (let d = 0.6; d < 2.6; d += 0.4) {
     creek.windAt(s, d, 5, 3.1, w);
     if (w.vy > 0) down = false;
     const fr = creek.frame(s);
     if (w.vx * fr.tx + w.vz * fr.tz < -1e-6) upstream = true;
   }
-  creek.windAt(77.8, 1.4, 5, 3.1, w);
+  creek.windAt(327.8, 1.4, 5, 3.1, w);
   ok(down && !upstream && w.vy < -2, `Folk Draft is a downdraft in the upper zone: vertical ${w.vy.toFixed(1)} m/s, never lifting, never blowing upstream`);
-  const rot = creek.codeRot.slice().sort((a, b) => b.k - a.k)[0];
-  ok(rot.s > 54 && rot.s < 60, `Code Rot observations are strongest at Crawfish Springs (s=${rot.s}, strength ${rot.k}); a separate layer from current and draft`);
-  const sp = STARTS[K.springs].s, sh = STARTS[K.shelf].s, wf = STARTS[K.waterfall].s;
-  ok(sp < sh && sh < wf && byId.shelf && byId.shelf.d > creek.c(72), `Crawfish Springs sits above the Shelf, which runs along the waterfall’s right side (springs ${sp}, shelf ${sh}, waterfall ${wf})`);
-  ok(STARTS[K.flatrocks] && byId.flatRocks && Math.abs(byId.flatRocks.s - STARTS[K.flatrocks].s) < 0.5 && creek.alt.s0 > wf && byId.split && byId.tapedSign && byId.tapedSign.s < byId.split.s,
-    'mapped Flat Rocks start, both waterfall branches (creek-right primary, alternate on the left) and the taped sign upstream of the split');
+  const spr = creek.springs;
+  const rot = spr.codeRot.slice().sort((a, b) => b.k - a.k)[0];
+  ok(creek.codeRot.length === 0 && rot.s > 54 && rot.s < 60, `Code Rot observations are strongest at Crawfish Springs (stream s=${rot.s}, strength ${rot.k}); a separate layer from current and draft`);
+  // the map: the order upstream, the Shelf on the east bank, the Springs as a side stream
+  const A = (id) => STARTS[K[id]].s;
+  const orderOk = S_FINISH > A('grounds') && A('springs') > creek.alt.s1 && creek.alt.s1 > STARTS.find((x) => x.id === 'waterfall').s && byId.falls.s > byId.split.s
+    && byId.split.s > A('shelf') && A('shelf') > A('flatrocks') && A('flatrocks') > byId.clearing.s && byId.clearing.s > byId.farlands.s;
+  ok(orderOk, `order upstream follows the creator's map: finish ${S_FINISH} → Springs confluence ${A('springs')} → falls ${byId.falls.s} → split ${byId.split.s} → Shelf ${A('shelf')} → Flat Rocks ${A('flatrocks')} → Clearing ${byId.clearing.s} → Farlands ${byId.farlands.s}`);
+  const fallsGap = byId.falls.s - byId.split.s, farGap = byId.split.s - A('flatrocks');
+  ok(fallsGap > 25 && farGap > 200 && S_FINISH - byId.falls.s > 80, `distances at half scale: split → falls ${fallsGap.toFixed(0)} m (map 67 m), Flat Rocks → split ${farGap.toFixed(0)} m (map ~500 m), falls → finish ${(S_FINISH - byId.falls.s).toFixed(0)} m`);
+  let east = 0, west = 0, n2 = 0;
+  for (let s2 = 40; s2 < 500; s2 += 5) { const c = creek.c(s2); east += creek.bedH(s2, c - creek.wL(s2) - 3.0) - creek.y0(s2); west += creek.bedH(s2, c + creek.wR(s2) + 3.0) - creek.y0(s2); n2++; }
+  const eastW = creek.worldXZ(250, creek.c(250) - 3), westW = creek.worldXZ(250, creek.c(250) + 3);
+  ok(east / n2 > west / n2 + 0.8 && eastW.x > westW.x, `the Continental Shelf is a terrace on the east bank (right, walking upstream) from the Farlands entrance to the Springs climb: east bank ${(east / n2).toFixed(1)} m vs west ${(west / n2).toFixed(1)} m above the water`);
+  const pondW = spr.worldXZ(57.7, spr.c(57.7) + 1.8);
+  ok(spr && pondW.x > creek.worldXZ(420, 0).x + 25 && spr.y0(57.7) > creek.y0(420) + 1.5 && A('springs') > byId.falls.s,
+    `Crawfish Springs is a secondary stream: double ponds ${(pondW.x - creek.worldXZ(420, 0).x).toFixed(0)} m east of the creek, ${(spr.y0(57.7) - creek.y0(420)).toFixed(1)} m up on the Shelf, joining the creek below the falls`);
+  ok(byId.flatRocks && Math.abs(byId.flatRocks.s - STARTS[K.flatrocks].s) < 7 && creek.ledgeZone(byId.flatRocks.s, byId.flatRocks.d) === 2 && byId.flatRocks.d > creek.c(byId.flatRocks.s) && creek.alt.off < 0 && byId.split && byId.tapedSign && byId.tapedSign.s < byId.split.s,
+    'Flat Rocks: the sandstone ledge on the west bank with the launch beside it, both waterfall branches (creek-right primary over the falls, alternate on the creek-left) and the taped sign upstream of the split');
   ok(byId.clearing && byId.farlands && byId.clearing.s > byId.farlands.s && FIELD.some((f) => f.key === 'farlands') && FIELD.some((f) => /shelf/i.test(f.key)),
     'the Clearing (Nigatron) sits below the Farlands entrance, and the field map runs from the Shelf to the Farlands line');
   const exp = FIELD_NOTES.expedition.join(' ');
@@ -471,10 +509,11 @@ if (want(7)) {
 if (want(8)) {
   head('8. First-person traversal (real walker, headless)');
   const r = traverse(creek, () => {}, 1);
-  ok(r.ok, `walked from the Old Rolling Grounds factory past the falls, the split and the taped sign, along the Shelf, through the Springs to the Farlands entrance in ${r.t.toFixed(0)} s (${r.reached.length} waypoints, ${r.detours} detours around trunks and rocks)`);
-  ok(r.waded > 1 && r.falls === 0, `waded ${r.waded.toFixed(1)} s through safe shallows without being sent back from deep water`);
-  ok(r.climb > 1, `climbed ${r.climb?.toFixed(1)} m from the waterfall pool up to Crawfish Springs`);
-  ok(r.made > 30 && r.launched > 30, `factories kept producing during the walk (${r.made} made, ${r.launched} launched, ${r.finished} finished across 6 open sites)`);
+  const M = r.main, Sp = r.springs;
+  ok(M.ok, `walked the whole creek from the Old Rolling Grounds factory past the Springs confluence, round the falls and the split, along the Shelf reach, past Flat Rocks and the Clearing to the Farlands entrance (${M.reached} waypoints, ${M.t.toFixed(0)} s, climbing ${M.climb.toFixed(1)} m${M.ok ? '' : `; stopped near ${M.stuckAt}`})`);
+  ok(Sp.ok && Sp.climb > 3, `climbed the Shelf from the brushy opening by pin A up the Crawfish Springs stream to the double ponds (${Sp.reached} waypoints, ${Sp.t.toFixed(0)} s, ${Sp.climb.toFixed(1)} m up${Sp.ok ? '' : `; stopped near ${Sp.stuckAt}`})`);
+  ok(M.falls + Sp.falls === 0 && M.waded + Sp.waded > 1, `waded ${(M.waded + Sp.waded).toFixed(1)} s through safe shallows without being sent back from deep water`);
+  ok(r.made > 30 && r.launched > 30, `factories kept producing during the walks (${r.made} made, ${r.launched} launched, ${r.finished} finished across 7 open sites)`);
 }
 
 // ================================================================= 9. progression

@@ -4,26 +4,30 @@
 
 import {
   STARTS, SITE_INDEX, UPGRADES, UPGRADE_BY_ID, S_FINISH, S_BASKET, MANUAL_COOLDOWN, PHYS_DT, BALL_R, BF,
-  REACHES, reachAt, RECIPES, RECIPE_INDEX, ORDERS, isSiteUpgrade,
+  REACHES, reachAt, reachChain, SPRINGS_REACH, RECIPES, RECIPE_INDEX, ORDERS, isSiteUpgrade,
   checkpointsFor, specFromOwned, bonusForSpec, recipeBonus, factoryNumbers, finishNumbers,
 } from './config.js';
 import { PhysicsWorld, makeBall, ballRand } from './physics.js';
-import { MAT } from './creek.js';
+import { MAT, S_MIN, S_MAX } from './creek.js';
+
+// Layout version: positions saved with an older geography cannot be placed on the new creek.
+export const GEO_VERSION = 2;
 
 export const SAVE_VERSION = 2;
 const OLD_IDS = ['grounds', 'waterfall', 'shelf', 'springs', 'alder', 'gorge'];
 
 // Where losses/stalls happen and which creek equipment addresses them
+// `cr: 'springs'` spots are on the Crawfish Springs runoff stream (stream coordinates).
 export const TROUBLE_SPOTS = [
-  { id: 'root', s0: 92.6, s1: 94.2, fix: 'rootRail', label: 'the exposed root' },
-  { id: 'gravel', s0: 94.2, s1: 96.4, fix: 'gravelMat', label: 'the rough gravel' },
-  { id: 'lip', s0: 85.0, s1: 87.6, fix: 'splashGuard', label: 'the waterfall lip' },
-  { id: 'pool', s0: 87.6, s1: 90.5, fix: 'poolGuide', label: 'the plunge pool eddy' },
-  { id: 'catch', s0: 76.0, s1: 80.5, fix: 'catchRamp', label: 'the Shelf drop' },
-  { id: 'codeRot', s0: 57.6, s1: 60.4, fix: 'habitatBypass', label: 'the Code Rot pocket at the Springs', side: 1 },
-  { id: 'springs', s0: 54.0, s1: 61.6, fix: 'debrisScreen', label: 'the Springs driftwood' },
-  { id: 'outlet', s0: 61.6, s1: 62.15, fix: 'clearingArm', label: 'the Springs outlet notch' },
-  { id: 'spillway', s0: 62.15, s1: 68.0, fix: 'spillRail', label: 'the narrow spillway' },
+  { id: 'root', s0: 549.1, s1: 550.7, fix: 'rootRail', label: 'the exposed root' },
+  { id: 'gravel', s0: 550.7, s1: 552.9, fix: 'gravelMat', label: 'the rough gravel' },
+  { id: 'lip', s0: 449.8, s1: 452.4, fix: 'splashGuard', label: 'the waterfall lip' },
+  { id: 'pool', s0: 452.4, s1: 456.0, fix: 'poolGuide', label: 'the plunge pool eddy' },
+  { id: 'catch', s0: 326.0, s1: 330.5, fix: 'catchRamp', label: 'the Shelf drop' },
+  { id: 'codeRot', s0: 57.6, s1: 60.4, fix: 'habitatBypass', label: 'the Code Rot pocket at the Springs', side: 1, cr: 'springs' },
+  { id: 'springs', s0: 52.6, s1: 61.6, fix: 'debrisScreen', label: 'the Springs driftwood', cr: 'springs' },
+  { id: 'outlet', s0: 61.6, s1: 62.15, fix: 'clearingArm', label: 'the Springs outlet notch', cr: 'springs' },
+  { id: 'spillway', s0: 62.15, s1: 68.0, fix: 'spillRail', label: 'the narrow spillway', cr: 'springs' },
   { id: 'island', s0: 44.0, s1: 50.5, fix: 'alderBypass', label: 'the dead pocket at the island' },
   { id: 'gorgeStep', s0: 8.6, s1: 11.0, fix: 'landingBoards', label: 'the first Gorge drop' },
   { id: 'slateEdge', s0: -12.9, s1: -11.0, fix: 'slateBumpers', label: 'the first slab at Slate Steps' },
@@ -37,15 +41,20 @@ export const TROUBLE_SPOTS = [
   { id: 'sluiceMerge', s0: -111, s1: -105.5, fix: 'sluiceMerge', label: 'the Sluice merge' },
   { id: 'headPool', s0: -152, s1: -138.3, fix: 'headGuide', label: 'the quiet spring margin' },
 ];
+/** Trouble spot containing a ball (or a stall record) on channel cr (0 main, 1 springs). */
+export function spotAt(s, cr = 0) {
+  for (const sp of TROUBLE_SPOTS) if ((sp.cr ? cr === 1 : cr !== 1) && s >= sp.s0 && s < sp.s1) return sp;
+  return null;
+}
 // Sweepers: zone, stall time that triggers them, the upgrade that installs them
 export const SWEEPERS = [
-  { id: 'arm', up: 'clearingArm', s0: 59.4, s1: 62.9, pivotS: 61.4, side: 1, name: 'Clearing Arm' },
+  { id: 'arm', up: 'clearingArm', s0: 59.4, s1: 62.9, pivotS: 61.4, side: 1, name: 'Clearing Arm', cr: 'springs' },
   { id: 'branch', up: 'branchSweeper', s0: 44.0, s1: 50.8, pivotS: 47.4, side: -1, name: 'Branch Sweeper' },
   { id: 'skimmer', up: 'spillSkimmer', s0: -90.9, s1: -85.6, pivotS: -88.2, side: 1, name: 'Pool Skimmer' },
 ];
 export const ARM = SWEEPERS[0];
-// The Bank Workshop yard (left bank at Alder Bend)
-export const WORKSHOP = { s: 38.5, side: -1 };
+// The Bank Workshop yard (west bank at Alder Bend, just inside the Farlands entrance)
+export const WORKSHOP = { s: 39.5, side: 1 };
 
 const SITE_GROUPS = ['rootRail', 'splashGuard', 'poolGuide', 'catchRamp', 'spillRail', 'alderBypass', 'landingBoards', 'debrisScreen',
   'willowShield', 'willowFlare', 'slateBumpers', 'leafGrate', 'splitMergeRail', 'basinBoom', 'spillApron', 'headGuide', 'headRails', 'habitatBypass'];
@@ -63,7 +72,8 @@ function newSite(k) {
 export class Game {
   constructor(creek, save = null, opts = {}) {
     this.creek = creek;
-    this.phys = new PhysicsWorld(creek);
+    this.springs = creek.springs || null;
+    this.phys = new PhysicsWorld(creek, this.springs);
     this.events = [];
     this.acc = 0;
     this.headless = !!opts.headless;
@@ -259,7 +269,7 @@ export class Game {
     M.slateOutlet = o.has('slateOutlet');
     M.headGuide = o.has('headGuide');
     M.sluiceMerge = o.has('sluiceMerge');
-    M.habitatGuide = o.has('habitatBypass');
+    if (this.springs) this.springs.mods.habitatGuide = o.has('habitatBypass');
     M.windScreen = o.has('windScreen');
     this.updateGates(0);
     const routes = 1 + (o.has('secondPost') ? 1 : 0) + (o.has('thirdPost') ? 1 : 0);
@@ -275,7 +285,7 @@ export class Game {
     this.sites.forEach((site, k) => {
       if (!site.open) { site.chuteCols = []; return; }
       if (!site.chuteCols.length) {
-        const cols = this.creek.chuteColliders(k);
+        const cols = this.creekFor(k).chuteColliders(k);
         for (const c of cols) { c.bcx = c.cx; c.bcz = c.cz; c.br = Math.hypot(c.h[0], c.h[2]) + BALL_R + 0.05; }
         site.chuteCols = cols;
       }
@@ -321,8 +331,12 @@ export class Game {
   }
 
   // ------------------------------------------------------------------ launching
+  /** Channel a site launches into (Crawfish Springs launches into its runoff stream). */
+  creekFor(k) { return STARTS[k].cr && this.springs ? this.springs : this.creek; }
+
   launch(k, item, manual = false) {
-    const ch = this.creek.chuteFor(k);
+    const cr = this.creekFor(k);
+    const ch = cr.chuteFor(k);
     const site = this.sites[k];
     const b = makeBall(item.id, item.spec, (item.id * 2654435761) ^ this.launchSeed);
     const [x0, y0, z0] = ch.R0, [x1, y1, z1] = ch.M;
@@ -351,7 +365,8 @@ export class Game {
     b.cpT = [];
     b.launchT = this.t;
     this.reserveOrder(b);
-    const L = this.creek.locate(b.x, b.z, -1, {});
+    b.cr = cr === this.creek ? 0 : 1;
+    const L = cr.locate(b.x, b.z, -1, {});
     b.hint = L.idx; b.s = L.s; b.d = L.d; b.prevS = L.s; b.maxS = L.s;
     this.phys.balls.push(b);
     site.lastLaunch = { id: item.id, t: this.t, x: b.x, y: b.y, z: b.z };
@@ -381,8 +396,7 @@ export class Game {
     const q = this.queueCount();
     if (q >= 7 + this.finish.overflow / 8) return 'Finish backed up';
     // reaches between this launch and the finish
-    const r0 = reachAt(st.s);
-    for (let r = r0; r >= 0; r--) {
+    for (const r of reachChain(k)) {
       const R = this.reachStats[r];
       if (R.count >= this.reachCap(r)) {
         // fair turns: only the longest-waiting site blocked on this reach may take a freed slot
@@ -390,10 +404,11 @@ export class Game {
       }
     }
     // yield to balls passing the launch from upstream sites
+    const ls = st.cr ? st.ls : st.s, lcr = st.cr ? 1 : 0;
     for (const b of this.phys.balls) {
-      if (b.state !== 'roll' || b.start === k) continue;
-      if (b.s > st.s - 0.9 && b.s < st.s + 0.35) {
-        if (site.waitT < 3 || Math.abs(b.s - (st.s + 0.1)) < 0.35) return 'Yielding to passing balls';
+      if (b.state !== 'roll' || b.start === k || (b.cr || 0) !== lcr) continue;
+      if (b.s > ls - 0.9 && b.s < ls + 0.35) {
+        if (site.waitT < 3 || Math.abs(b.s - (ls + 0.1)) < 0.35) return 'Yielding to passing balls';
       }
     }
     return '';
@@ -496,7 +511,7 @@ export class Game {
     for (const R of this.reachStats) R.turn = undefined;
     const waitingSites = this.sites.map((s, k) => ({ s, k })).filter((x) => x.s.open && x.s.waitT > 0).sort((a, b) => b.s.waitT - a.s.waitT);
     for (const { k } of waitingSites) {
-      for (let r = reachAt(STARTS[k].s); r >= 0; r--) if (this.reachStats[r].count >= this.reachCap(r) && this.reachStats[r].turn === undefined) this.reachStats[r].turn = k;
+      for (const r of reachChain(k)) if (this.reachStats[r].count >= this.reachCap(r) && this.reachStats[r].turn === undefined) this.reachStats[r].turn = k;
     }
     void waiting;
     // legacy status mirrors for the selected site
@@ -592,7 +607,7 @@ export class Game {
   updateReaches() {
     const n = REACHES.length;
     const counts = new Array(n).fill(0);
-    for (const b of this.phys.balls) if (b.state === 'roll' && !b.paid) counts[reachAt(b.s)]++;
+    for (const b of this.phys.balls) if (b.state === 'roll' && !b.paid) counts[b.cr ? SPRINGS_REACH : reachAt(b.s)]++;
     for (let r = 0; r < n; r++) {
       const R = this.reachStats[r];
       R.count = counts[r];
@@ -605,14 +620,14 @@ export class Game {
       const site = this.sites[k];
       if (!site.open || site.gap > 0) continue;
       let worst = 0;
-      for (let r = reachAt(STARTS[k].s); r >= 0; r--) worst = Math.max(worst, this.reachStats[r].count / this.reachCap(r));
+      for (const r of reachChain(k)) worst = Math.max(worst, this.reachStats[r].count / this.reachCap(r));
       const want = worst > 0.85 ? 1.6 : worst > 0.6 ? 1.2 : 1;
       site.autoGapK += (want - site.autoGapK) * 0.5;
     }
   }
 
   trackBalls(h) {
-    const cr = this.creek;
+    const main = this.creek;
     const balls = this.phys.balls;
     const fin = this.finish;
     for (let i = balls.length - 1; i >= 0; i--) {
@@ -620,6 +635,12 @@ export class Game {
       if (b.state === 'queue') continue;
       if (b.state !== 'roll') { balls.splice(i, 1); continue; }
       const s = b.s, d = b.d;
+      const cr = main;
+      if (b.cr) {
+        // on the Springs runoff stream: the physics hands the ball to the creek at the confluence
+        this.trackStall(b, h, this.springs, i);
+        continue;
+      }
       // checkpoints (either lane of a fork is legal)
       while (b.cpi < b.cps.length && s >= b.cps[b.cpi]) {
         if (cr.inChannel(b.cps[b.cpi], d, 0.4)) { if (b.cpT) b.cpT.push([b.cps[b.cpi], this.t]); b.cpi++; this.events.push({ type: 'checkpoint', id: b.id }); }
@@ -627,7 +648,7 @@ export class Game {
       }
       if (s > b.maxS) b.maxS = s;
       // Folk Draft catch log: an airborne ball dropping off the Shelf
-      if (b.prevS < 78.45 && s >= 78.45 && b.y > cr.y0(79) + 0.4) this.stats.draftCatch++;
+      if (b.prevS < 328.45 && s >= 328.45 && b.y > cr.y0(329) + 0.4) this.stats.draftCatch++;
       // finish gate
       if (!b.paid && b.prevS < S_FINISH && s >= S_FINISH) {
         const legal = cr.inChannel(S_FINISH, d, 0.06) && b.cpi >= b.cps.length && !b.missed;
@@ -644,10 +665,17 @@ export class Game {
         continue;
       }
       if (b.paid) continue;
+      this.trackStall(b, h, cr, i);
+    }
+  }
+
+  /** Stall nudges and loss rules for an unpaid ball on channel cr. */
+  trackStall(b, h, cr, i) {
+      const s = b.s, d = b.d;
       // stall handling: a ball is stalled when it stops making downstream progress
       const inWater = b.sub > 0;
       if (b.progS === undefined) b.progS = s;
-      if (s > b.progS + 0.08) { b.progS = s; if (b.stallT > 4) this.stallLog.push([this.t, s, b.stallT]); b.stallT = 0; } else b.stallT += h;
+      if (s > b.progS + 0.08) { b.progS = s; if (b.stallT > 4) this.stallLog.push([this.t, s, b.stallT, b.cr || 0]); b.stallT = 0; } else b.stallT += h;
       const circling = b.speedAvg > 0.06;
       const every = circling ? 5 : 2;
       if (b.stallT > (circling ? 6 : 3) && inWater && Math.floor(b.stallT / every) !== Math.floor((b.stallT - h) / every)) {
@@ -667,13 +695,12 @@ export class Game {
         if (s > a.s0 && s < a.s1) off = Math.min(off, Math.abs(d - cr.altD(s)) - a.w);
       }
       let reason = null;
-      if (s < -151.5 || s > 107 || Math.abs(d) > 9.5) reason = 'left the creek';
+      if (s < cr.sMin + 0.5 || (!b.cr && s > cr.sMax - 0.5) || Math.abs(d) > 9.5) reason = 'left the creek';
       else if (b.y < cr.bedH(s, d) - 0.25) reason = 'left the creek';
       else if (off > 0.5 && b.stallT > 3) reason = 'escaped onto the bank';
       else if (b.stallT > (inWater ? 22 : 8)) reason = b.speedAvg > 0.05 ? 'stuck in an eddy' : 'wedged';
       else if (b.age > Math.max(40, this.etaFor(b.start) * 3.2)) reason = 'took too long';
       if (reason) this.lose(b, reason, i);
-    }
   }
 
   pay(b) {
@@ -724,7 +751,7 @@ export class Game {
     this.stats.lost++;
     this.sites[b.start].stats.lost++;
     let spot = 'other';
-    for (const sp of TROUBLE_SPOTS) if (b.s >= sp.s0 && b.s < sp.s1) { spot = sp.id; break; }
+    const sp0 = spotAt(b.s, b.cr || 0); if (sp0) spot = sp0.id;
     this.lossBySpot[spot] = (this.lossBySpot[spot] || 0) + 1;
     this.lossLog.push([this.t, spot]);
     if (b.orderId) { const o = this.findOrder(b.orderId); if (o) { o.reserved = Math.max(0, o.reserved - 1); if (o.twoPosts) o.perPostRes[b.start] = Math.max(0, (o.perPostRes[b.start] || 0) - 1); } }
@@ -818,7 +845,8 @@ export class Game {
   }
 
   updateLogs(h) {
-    const cr = this.creek;
+    const cr = this.springs;
+    if (!cr) return;
     const screened = this.owned.has('debrisScreen');
     this.logs.forEach((L, i) => {
       L.ph += h * 0.055;
@@ -879,8 +907,9 @@ export class Game {
   }
 
   updateSweepers(h) {
-    const cr = this.creek;
     SWEEPERS.forEach((S, i) => {
+      const cr = S.cr ? this.springs : this.creek, scr = S.cr ? 1 : 0;
+      if (!cr) return;
       const A = this.sweep[i];
       A.cd = Math.max(0, A.cd - h);
       if (A.phase > 0) {
@@ -888,7 +917,7 @@ export class Game {
         A.phase += h / 1.1;
         if (prev < 0.5 && A.phase >= 0.5) {
           for (const b of this.phys.balls) {
-            if (b.state !== 'roll' || b.paid || b.s < S.s0 || b.s > S.s1 || b.stallT < 1.5) continue;
+            if (b.state !== 'roll' || b.paid || (b.cr || 0) !== scr || b.s < S.s0 || b.s > S.s1 || b.stallT < 1.5) continue;
             const s = b.s;
             // back into the same lane, at the same place: no skipped checkpoints
             const ch = cr.channelOf(s, b.d, 0.3);
@@ -910,7 +939,7 @@ export class Game {
       }
       if (!this.owned.has(S.up) || A.cd > 0) return;
       for (const b of this.phys.balls) {
-        if (b.state === 'roll' && !b.paid && b.s >= S.s0 && b.s <= S.s1 && b.stallT > 2.2) {
+        if (b.state === 'roll' && !b.paid && (b.cr || 0) === scr && b.s >= S.s0 && b.s <= S.s1 && b.stallT > 2.2) {
           A.phase = 1e-6;
           this.events.push({ type: 'armSweep', sweeper: S.id });
           break;
@@ -944,7 +973,7 @@ export class Game {
   /** Bank distance and lift dwell between two s positions. */
   legTime(s0, s1) {
     const dist = Math.abs(s1 - s0) * 1.12 + 1.5;
-    const dy = Math.abs(this.creek.y0(Math.max(-151, Math.min(107, s0))) - this.creek.y0(Math.max(-151, Math.min(107, s1))));
+    const dy = Math.abs(this.creek.y0(Math.max(S_MIN + 1, Math.min(S_MAX - 1, s0))) - this.creek.y0(Math.max(S_MIN + 1, Math.min(S_MAX - 1, s1))));
     const lift = dy > 2 ? (this.owned.has('fastLift') ? 1.5 : 4) : 0;
     return dist / this.cartSpeed() + lift;
   }
@@ -1153,7 +1182,7 @@ export class Game {
     const counts = {};
     for (const [, sp] of this.lossLog) counts[sp] = (counts[sp] || 0) + 1;
     const stalls = {};
-    for (const [, s] of this.stallLog) for (const sp of TROUBLE_SPOTS) if (s >= sp.s0 && s < sp.s1) stalls[sp.id] = (stalls[sp.id] || 0) + 1;
+    for (const [, s, , c] of this.stallLog) { const sp = spotAt(s, c || 0); if (sp) stalls[sp.id] = (stalls[sp.id] || 0) + 1; }
     for (const sp of TROUBLE_SPOTS) {
       if (this.has(sp.fix) || this.blocked(sp.fix)) continue;
       if ((counts[sp.id] || 0) >= 2) out[sp.fix] = `${counts[sp.id]} balls lost recently at ${sp.label}`;
@@ -1194,10 +1223,10 @@ export class Game {
       wx: b.wx, wy: b.wy, wz: b.wz, q: [b.qx, b.qy, b.qz, b.qw], k: STARTS[b.start].id, site: STARTS[b.site ?? b.start].id, rec: b.recipe || 0,
       pay: b.payout, cps: b.cps, cpi: b.cpi, cpT: b.cpT || [], paid: b.paid, missed: !!b.missed, wet: b.wet, age: b.age, lt: b.launchT,
       stall: b.stallT, rs: b.rs, ps: b.prevS, ms: b.maxS, qT: b.qT || 0, wob: b.wob, pg: b.progS, sa: b.speedAvg, sub: b.sub, qi: b.qi,
-      ord: b.orderId || 0, ob: b.orderBonus || 0, ncn: b.ncn || 0, bat: b.batch || 0, rep: b.replica || null, gau: !!b.gauged,
+      ord: b.orderId || 0, ob: b.orderBonus || 0, ncn: b.ncn || 0, bat: b.batch || 0, rep: b.replica || null, gau: !!b.gauged, cr: b.cr || 0,
     }));
     return {
-      v: SAVE_VERSION, savedAt: Date.now(), t: this.t, cash: this.cash, owned: [...this.owned], sel: STARTS[this.sel].id,
+      v: SAVE_VERSION, geo: GEO_VERSION, savedAt: Date.now(), t: this.t, cash: this.cash, owned: [...this.owned], sel: STARTS[this.sel].id,
       sites: this.sites.map((s) => ({
         id: s.id, open: s.open, owned: [...s.owned], hopper: s.hopper.map(ser), post: s.post.map(ser), pressProg: s.pressProg, pressCount: s.pressCount,
         feederT: s.feederT, manualCD: s.manualCD, lastLaunch: s.lastLaunch, recipe: s.recipe, changeT: s.changeT, batch: s.batch, madeBy: s.madeBy,
@@ -1280,7 +1309,30 @@ export class Game {
     this.sessionStart = this.t - 60;
     this.phys.t = d.physT ?? this.t;
     this.acc = d.acc || 0;
-    this.phys.balls = (d.balls || []).map((o) => {
+    let saved = d.balls || [];
+    if (d.geo !== GEO_VERSION) {
+      // Saved before the creek was laid out along the creator's map: ball positions and bank
+      // positions no longer exist. Unpaid rolling balls go back to the front of their own
+      // factory's queue (same ID, recipe, origin and markings; any order slot is released and
+      // reserved again when they relaunch). Paid balls were already settled.
+      for (const o of saved) {
+        if (o.st !== 'roll' || o.paid) continue;
+        const k = idx(o.k), home = this.sites[idx(o.site ?? o.k)] || this.sites[k];
+        home.hopper.unshift({ id: o.id, spec: o.spec, recipe: o.rec || 0, site: idx(o.site ?? o.k), made: o.lt || 0, ncn: o.ncn || 0, batch: o.bat || 0, replica: o.rep || null, gauged: !!o.gau });
+        this.sites[k].stats.launched = Math.max(0, this.sites[k].stats.launched - 1);
+        this.stats.launched = Math.max(0, this.stats.launched - 1);
+        if (o.ord) { const ord = this.findOrder(o.ord); if (ord) ord.reserved = Math.max(0, ord.reserved - 1); }
+        if (home !== this.sites[k]) { home.stats.transferredOut = Math.max(0, home.stats.transferredOut - 1); this.sites[k].stats.transferredIn = Math.max(0, this.sites[k].stats.transferredIn - 1); }
+      }
+      saved = [];
+      for (const c of this.workshop.carts) {
+        if (c.load && c.load.length && this.sites[c.src]) { this.sites[c.src].hopper.push(...c.load); this.sites[c.src].stats.transferredOut -= c.load.length; c.load = []; }
+        c.state = 'idle'; c.s = WORKSHOP.s; c.reserved = 0; c.t = 0;
+      }
+      this.player = null;
+      this.geoMigrated = true;
+    }
+    this.phys.balls = saved.map((o) => {
       const b = makeBall(o.id, o.spec, o.rs);
       Object.assign(b, {
         x: o.x, y: o.y, z: o.z, vx: o.vx, vy: o.vy, vz: o.vz, wx: o.wx, wy: o.wy, wz: o.wz,
@@ -1289,10 +1341,12 @@ export class Game {
         stallT: o.stall, state: o.st, prevS: o.ps, maxS: o.ms, qT: o.qT, wob: o.wob || 0, progS: o.pg, speedAvg: o.sa ?? 0.5,
         sub: o.sub ?? 0, qi: o.qi, orderId: o.ord || 0, orderBonus: o.ob || 0, ncn: o.ncn || 0, batch: o.bat || 0, replica: o.rep || null, gauged: !!o.gau,
       });
-      const L = this.creek.locate(b.x, b.z, -1, {});
+      b.cr = o.cr && this.springs ? 1 : 0;
+      const cr = b.cr ? this.springs : this.creek;
+      const L = cr.locate(b.x, b.z, -1, {});
       b.hint = L.idx; b.s = L.s; b.d = L.d;
       // terrain may have been reshaped by an update: never leave a ball inside the ground
-      const ground = this.creek.bedH(b.s, b.d) + BALL_R * 0.9;
+      const ground = cr.bedH(b.s, b.d) + BALL_R * 0.9;
       if (b.y < ground) b.y = ground;
       return b;
     });

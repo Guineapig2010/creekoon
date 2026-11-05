@@ -42,7 +42,7 @@ export class SceneView {
     this.scene = scene;
     scene.fog = new THREE.Fog(0xb9ccc8, 30, 170);
     scene.background = new THREE.Color(0xb9ccc8);
-    const camera = new THREE.PerspectiveCamera(game.settings.fov || 70, container.clientWidth / container.clientHeight, 0.03, 700);
+    const camera = new THREE.PerspectiveCamera(game.settings.fov || 70, container.clientWidth / container.clientHeight, 0.03, 2000);
     this.camera = camera;
     this.sunDir = new THREE.Vector3(0.45, 0.78, 0.35).normalize();
     const sky = new THREE.Mesh(new THREE.SphereGeometry(450, 32, 16), new THREE.ShaderMaterial({
@@ -90,16 +90,31 @@ export class SceneView {
     const q = this.quality, cr = this.creek, scene = this.scene;
     if (this.world) { scene.remove(this.world); this.world.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); }
     const w = new THREE.Group();
+    const sp = cr.springs;
     w.add(buildTerrain(cr, q));
+    if (sp) w.add(buildTerrain(sp, q, cr));
     w.add(buildFarTerrain(cr, q));
     for (const m of buildRocks(cr)) w.add(m);
+    if (sp) for (const m of buildRocks(sp)) w.add(m);
     w.add(buildVegetation(cr, q));
-    this.riparian = buildRiparian(cr, q);
+    if (sp) w.add(buildVegetation(sp, q, false));
+    // creek-side woodland on both channels (one group: the canopy hides in the overhead map)
+    this.riparian = new THREE.Group();
+    const rips = [buildRiparian(cr, q), ...(sp ? [buildRiparian(sp, q, cr)] : [])];
+    for (const r of rips) this.riparian.add(r);
+    this.riparian.userData.trunks = rips.flatMap((r) => r.userData.trunks);
     w.add(this.riparian);
     this.water = buildWater(cr, q, this.sunDir);
     w.add(this.water);
+    if (sp) w.add(buildWater(sp, q, this.sunDir, this.water.material));
     this.falls = buildFalls(cr);
     w.add(this.falls);
+    if (sp) {
+      const f2 = buildFalls(sp);
+      this.falls.userData.sheets.push(...f2.userData.sheets);
+      f2.traverse((o) => { if (o.material && o.material.uniforms) o.material = this.falls.children[0]?.material || o.material; });
+      w.add(f2);
+    }
     scene.add(w);
     this.world = w;
     this.player.setTrunks(this.riparian.userData.trunks);
@@ -149,11 +164,11 @@ export class SceneView {
 
   /** Stand beside a factory, facing its chute and the water. */
   spawnAt(k) {
-    const cr = this.creek;
     const st = STARTS[k];
+    const cr = st.cr && this.creek.springs ? this.creek.springs : this.creek;
     // stand a little downstream of the factory on its bank, looking back upstream at the
     // press, the chute and the water
-    const s = st.s + 1.5, d = cr.c(s) + cr.wR(s) + 1.5;
+    const s = cr.siteS(st) + 1.5, d = cr.c(s) + cr.wR(s) + 1.5;
     const p = cr.worldXZ(s, d);
     const fr = cr.frame(s);
     const lookX = -fr.nx * 0.55 - fr.tx, lookZ = -fr.nz * 0.55 - fr.tz;
@@ -391,6 +406,7 @@ export class SceneView {
       if (b.state === 'roll' && b.sub > 0.004 && b.sub < 2 * BALL_R && near2 < 18 * 18) {
         const due = this.wakeT.get(b.id) || 0;
         if (t > due) {
+          const cr = b.cr && this.creek.springs ? this.creek.springs : this.creek;
           const fr = cr.frame(b.s);
           cr.flowAt(b.s, b.d, b.y, g.t, fr.tx, fr.tz, this.fl);
           const rv = Math.hypot(b.vx - this.fl.vx, b.vz - this.fl.vz);
@@ -466,9 +482,10 @@ export class SceneView {
     BR.end(far);
     if (followPos) {
       BR.ring.visible = true;
-      const L = cr.locate(followPos.x, followPos.z, -1, {});
-      const wl = cr.waterLevel(L.s, L.d);
-      BR.ring.position.set(followPos.x, Math.max(followPos.y - BALL_R + 0.003, (wl > -1e8 ? wl : cr.y0(L.s)) + 0.004), followPos.z);
+      let fc = cr, L = cr.locate(followPos.x, followPos.z, -1, {});
+      if (Math.abs(L.d) > 9.6 && cr.springs) { fc = cr.springs; L = fc.locate(followPos.x, followPos.z, -1, {}); }
+      const wl = fc.waterLevel(L.s, L.d);
+      BR.ring.position.set(followPos.x, Math.max(followPos.y - BALL_R + 0.003, (wl > -1e8 ? wl : fc.y0(L.s)) + 0.004), followPos.z);
     } else BR.ring.visible = false;
 
     // ---- camera
@@ -479,7 +496,7 @@ export class SceneView {
       const wasCine = !!this.rig.cine;
       this.rig.update(dt, followPos);
       if (wasCine && !this.rig.cine && this.afterPan) { const f = this.afterPan; this.afterPan = null; f(); }
-      this.scene.fog.near = this.mode === 'map' ? 200 : 40; this.scene.fog.far = this.mode === 'map' ? 600 : 200;
+      this.scene.fog.near = this.mode === 'map' ? 300 + this.rig.dist : 40; this.scene.fog.far = this.mode === 'map' ? 900 + this.rig.dist * 2 : 200;
     }
     // ---- sun shadow follows the view
     const tg = this.mode === 'fp' ? this.player.pos : this.rig.target;

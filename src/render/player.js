@@ -4,7 +4,6 @@
 // position after falling into deep water.
 import * as THREE from 'three';
 import { clamp } from '../core/noise.js';
-import { S_MIN, S_MAX } from '../core/creek.js';
 
 const EYE = 1.6;
 const WALK = 1.45, RUN = 3.0;
@@ -90,11 +89,24 @@ export class Player {
     this.safe = this.pos.clone();
   }
 
+  /** The channel corridor a point is in: the creek, or the Crawfish Springs stream beside it. */
+  channelAt(x, z) {
+    const m = this.creek;
+    const L = m.locate(x, z, this.hint, this.loc);
+    const inMain = Math.abs(L.d) <= 9.6 && L.s > m.sMin && L.s < m.sMax;
+    if ((inMain && Math.abs(L.d) <= 8.5) || !m.springs) return { cr: m, L, inside: inMain };
+    // near the creek corridor's edge the Springs stream's corridor may take over (the Shelf climb)
+    const sp = m.springs;
+    const L2 = sp.locate(x, z, -1, this.loc2 || (this.loc2 = {}));
+    const inSpr = Math.abs(L2.d) <= 9.6 && L2.s > sp.sMin && L2.s < sp.sMax;
+    if (inSpr && (!inMain || Math.abs(L.d) > 9.2 || Math.abs(L2.d) < Math.abs(L.d))) return { cr: sp, L: L2, inside: true };
+    return { cr: m, L, inside: inMain };
+  }
+
   /** Ground height including boulders the player can stand on. */
   groundAt(x, z) {
-    const cr = this.creek;
-    const L = cr.locate(x, z, this.hint, this.loc);
-    const s = clamp(L.s, S_MIN, S_MAX), d = clamp(L.d, -10, 10);
+    const { cr, L } = this.channelAt(x, z);
+    const s = clamp(L.s, cr.sMin, cr.sMax), d = clamp(L.d, -10, 10);
     let h = cr.bedH(s, d);
     const cell = cr.cellList(x, z);
     if (cell) {
@@ -109,9 +121,8 @@ export class Player {
   }
 
   waterAt(x, z) {
-    const cr = this.creek;
-    const L = cr.locate(x, z, this.hint, this.loc);
-    if (L.s < S_MIN || L.s > S_MAX || Math.abs(L.d) > 10) return { depth: 0, level: -Infinity };
+    const { cr, L } = this.channelAt(x, z);
+    if (L.s < cr.sMin || L.s > cr.sMax || Math.abs(L.d) > 10) return { depth: 0, level: -Infinity };
     const wl = cr.waterLevel(L.s, L.d);
     if (!(wl > -1e8)) return { depth: 0, level: -Infinity };
     return { depth: Math.max(0, wl - cr.bedH(L.s, L.d)), level: wl };
@@ -133,9 +144,10 @@ export class Player {
       }
     }
     for (const st of this.structures) if (Math.hypot(x1 - st.x, z1 - st.z) < st.r) return true;
-    // corridor edges: dense brush and valley sides close the walkable reach
-    const L = this.creek.locate(x1, z1, this.hint, this.loc);
-    if (Math.abs(L.d) > 9.2 || L.s < S_MIN + 1 || L.s > S_MAX - 1.5) return true;
+    // corridor edges: dense brush and valley sides close the walkable reach (the creek's
+    // corridor, and the Springs stream's corridor up on the Shelf)
+    const C = this.channelAt(x1, z1);
+    if (!C.inside || Math.abs(C.L.d) > 9.2 || C.L.s < C.cr.sMin + 1 || (C.cr.isMain && C.L.s > C.cr.sMax - 1.5)) return true;
     return false;
   }
 
@@ -167,8 +179,9 @@ export class Player {
       else { nx = x0; nz = z0; this.vel.set(0, 0, 0); }
     }
     this.pos.x = nx; this.pos.z = nz;
-    const L = this.creek.locate(nx, nz, this.hint, this.loc);
-    this.hint = L.idx;
+    const C0 = this.channelAt(nx, nz);
+    const L = C0.L;
+    if (C0.cr === this.creek) this.hint = L.idx;
     const g = this.groundAt(nx, nz);
     this.pos.y += (g - this.pos.y) * (1 - Math.exp(-dt * 14));
     // deep water: back to the last safe bank position
@@ -190,7 +203,7 @@ export class Player {
       if (this.stepAcc > 0.72) {
         this.stepAcc = 0;
         if (this.onStep) {
-          const B = this.creek.bedAt(L.s, L.d, {});
+          const B = C0.cr.bedAt(L.s, L.d, {});
           this.onStep(w2.depth > 0.02 ? 'water' : B.mat, Math.min(1, hs / RUN));
         }
       }

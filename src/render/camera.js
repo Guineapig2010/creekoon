@@ -86,7 +86,7 @@ export class CameraRig {
   }
 
   zoom(f) {
-    this.dist = clamp(this.dist * f, 0.25, 160);
+    this.dist = clamp(this.dist * f, 0.25, 520);
   }
 
   pan(dx, dy, k) {
@@ -172,7 +172,7 @@ export class CameraRig {
     // keep target on the ground
     if (this.follow == null) {
       const L = cr.locate(this.target.x, this.target.z, -1, {});
-      const ground = Math.max(cr.bedH(clamp(L.s, -151, 108), clamp(L.d, -10, 10)), cr.y0(clamp(L.s, -151, 108)));
+      const ground = Math.max(cr.bedH(clamp(L.s, cr.sMin, cr.sMax), clamp(L.d, -10, 10)), cr.y0(clamp(L.s, cr.sMin, cr.sMax)));
       this.target.y += (ground - this.target.y) * (1 - Math.exp(-dt * 6));
     }
     const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
@@ -191,7 +191,7 @@ export class CameraRig {
       const pz = this.target.z + (cam.position.z - this.target.z) * f;
       const py = this.target.y + (cam.position.y - this.target.y) * f;
       const L = cr.locate(px, pz, -1, tmp);
-      if (L.s < -151 || L.s > 107 || Math.abs(L.d) > 9.9) continue;
+      if (L.s < cr.sMin || L.s > cr.sMax - 1 || Math.abs(L.d) > 9.9) continue;
       const gy = Math.max(cr.bedH(L.s, L.d), cr.waterLevel(L.s, L.d)) + (i === 8 ? 0.06 : 0.03);
       if (py < gy) lift = Math.max(lift, (gy - py) / f);
     }

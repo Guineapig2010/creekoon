@@ -1,6 +1,6 @@
 // Terrain, rocks and vegetation meshes built from the creek description.
 import * as THREE from 'three';
-import { S_MIN, S_MAX, MAT } from '../core/creek.js';
+import { MAT } from '../core/creek.js';
 import { fbm, vnoise, mulberry32, clamp, smoothstep } from '../core/noise.js';
 import { STARTS, S_FINISH } from '../core/config.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -18,7 +18,7 @@ const COL = {
 };
 
 function dSamples(quality) {
-  const fine = quality === 'low' ? 0.09 : quality === 'medium' ? 0.06 : 0.045;
+  const fine = quality === 'low' ? 0.1 : quality === 'medium' ? 0.085 : 0.07;
   const arr = [];
   for (let d = -10; d < -3.2; d += 0.4) arr.push(d);
   for (let d = -3.2; d < 4.4; d += fine) arr.push(d);
@@ -63,6 +63,14 @@ export function terrainColor(creek, s, d, h, mat, out, slope = 0, x = 0, z = 0) 
       if (!steep && above > 0.3) out.lerp(COL.moss, clamp(0.25 + n * 0.4, 0, 0.5) * (1 - steep));
     }
   }
+  // Flat Rocks: tan layered sandstone, the dark undercut, and blue-grey cobbles on the bar
+  const lz = creek.ledgeZone ? creek.ledgeZone(s, d) : -1;
+  if (lz === 2) {
+    const band = 0.5 + 0.5 * Math.sin((h - y0) * 38 + vnoise(s * 0.8, d * 0.8, 21) * 3);
+    out.setRGB(0.58 + 0.12 * band, 0.45 + 0.1 * band, 0.28 + 0.08 * band);
+    if (h - y0 > 0.86) out.lerp(COL.moss, 0.12 + 0.1 * Math.max(0, n));
+  } else if (lz === 1) out.setRGB(0.12, 0.11, 0.09);
+  else if (lz === 0 && !inBed) out.setRGB(0.5 + 0.05 * n, 0.52 + 0.05 * n, 0.55 + 0.06 * n);
   // speckle
   const sp = 1 + n * 0.16 + (mat === MAT.GRAVEL && inBed ? vnoise(s * 40, d * 40, 8) * 0.2 : 0);
   out.multiplyScalar(sp);
@@ -78,8 +86,19 @@ export function terrainColor(creek, s, d, h, mat, out, slope = 0, x = 0, z = 0) 
   return out;
 }
 
-export function buildTerrain(creek, quality) {
-  const ds = quality === 'low' ? 0.2 : quality === 'medium' ? 0.13 : 0.1;
+/** World box (x0, x1, z0, z1) around both channels, with a margin. */
+export function worldBounds(creek, margin = 60) {
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  for (const cr of [creek, creek.springs].filter(Boolean)) {
+    for (let i = 0; i < cr.nC; i += 8) { x0 = Math.min(x0, cr.cx[i]); x1 = Math.max(x1, cr.cx[i]); z0 = Math.min(z0, cr.cz[i]); z1 = Math.max(z1, cr.cz[i]); }
+  }
+  return { x0: x0 - margin, x1: x1 + margin, z0: z0 - margin, z1: z1 + margin };
+}
+
+/** Terrain mesh of one channel corridor. A tributary's mesh is cut where it enters the main corridor. */
+export function buildTerrain(creek, quality, main = null) {
+  const S_MIN = creek.sMin, S_MAX = creek.sMax;
+  const ds = quality === 'low' ? 0.3 : quality === 'medium' ? 0.24 : 0.2;
   const dArr = dSamples(quality);
   const nS = Math.floor((S_MAX - S_MIN) / ds) + 1;
   const nD = dArr.length;
@@ -113,12 +132,21 @@ export function buildTerrain(creek, quality) {
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.setIndex(idx);
   geo.computeVertexNormals();
+  if (main) {
+    // the stream's corridor overlaps the creek's near the confluence: the creek's own terrain
+    // (with the gully carved into it) takes over there, so drop those vertices below ground
+    const L = {};
+    for (let k = 0; k < nS * nD; k++) {
+      const x = pos[k * 3], z = pos[k * 3 + 2];
+      if (main.locate(x, z, -1, L) && Math.abs(L.d) < 9.75 && L.s > main.sMin && L.s < main.sMax) pos[k * 3 + 1] -= 3;
+    }
+  }
   const detail = detailTexture(256, 3, 0.42);
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, map: detail, roughness: 0.92, metalness: 0 });
   // split into ~10 m chunks so off-screen parts of the long creek are culled
   const group = new THREE.Group();
   group.name = 'terrain';
-  for (const g of splitRows(geo, nS, nD, Math.max(8, Math.round(10 / ds)))) {
+  for (const g of splitRows(geo, nS, nD, Math.max(8, Math.round(20 / ds)))) {
     const m = new THREE.Mesh(g, mat);
     m.receiveShadow = true;
     group.add(m);
@@ -153,20 +181,35 @@ export function splitRows(geo, nRows, nCols, rowsPer) {
 }
 
 /** Height of the landscape at any world point (also outside the creek corridor). */
-export function landHeight(creek, x, z, hint = {}) {
-  const L = creek.locate(x, z, -1, hint);
-  const s = clamp(L.s, S_MIN, S_MAX);
-  let h = creek.bedRaw(s, L.d, {});
-  const ad = Math.abs(L.d - creek.c(s));
-  h += (fbm(x * 0.025, z * 0.025, 3, 91) * 5 + 1.2) * smoothstep(9, 35, ad);
-  // beyond the ends of the creek corridor rise gently
-  if (L.s < S_MIN) h += (S_MIN - L.s) * 0.12;
-  return { h, s: L.s, d: L.d, ad };
+const farNoise = (x, z, ad) => (fbm(x * 0.025, z * 0.025, 3, 91) * 5 + 1.2) * smoothstep(9, 35, ad);
+function corridorHeight(cr, x, z) {
+  const L = cr.locate(x, z, -1, {});
+  const s = clamp(L.s, cr.sMin, cr.sMax);
+  let h = cr.bedRaw(s, clamp(L.d, -60, 60), {});
+  const ad = Math.abs(L.d - cr.c(s));
+  h += farNoise(x, z, ad);
+  // beyond the ends of a corridor rise gently
+  if (L.s < cr.sMin) h += (cr.sMin - L.s) * 0.12;
+  const beyond = L.s < cr.sMin - 0.3 || L.s > cr.sMax + 0.3;
+  const edge = beyond ? Math.max(Math.abs(L.d), 10 + Math.max(cr.sMin - L.s, L.s - cr.sMax)) : Math.abs(L.d);
+  return { h, s: L.s, d: L.d, ad, edge, inside: !beyond && Math.abs(L.d) < 9.7 };
+}
+
+/** Height of the landscape at any world point (also outside the creek corridors). */
+export function landHeight(creek, x, z) {
+  const m = corridorHeight(creek, x, z);
+  if (!creek.springs) return m;
+  const t = corridorHeight(creek.springs, x, z);
+  if (t.inside || t.edge > 60) return t.inside ? { ...m, inside: true, h: t.h } : m;
+  // between the two corridors: blend by distance beyond each corridor's edge
+  const em = Math.max(0, m.edge - 9.7), et = Math.max(0, t.edge - 9.7);
+  const w = em / (em + et + 1e-6);
+  return { ...m, h: m.h * (1 - w) + t.h * w, ad: Math.min(m.ad, t.ad), inside: m.inside };
 }
 
 export function buildFarTerrain(creek, quality) {
-  const step = quality === 'low' ? 2 : 1.25;
-  const x0 = -90, x1 = 90, z0 = -290, z1 = 50;
+  const step = quality === 'low' ? 2.5 : 1.5;
+  const { x0, x1, z0, z1 } = worldBounds(creek, 90);
   const nx = Math.round((x1 - x0) / step) + 1, nz = Math.round((z1 - z0) / step) + 1;
   const pos = new Float32Array(nx * nz * 3), col = new Float32Array(nx * nz * 3), uv = new Float32Array(nx * nz * 2);
   const inside = new Uint8Array(nx * nz);
@@ -175,7 +218,7 @@ export function buildFarTerrain(creek, quality) {
     const x = x0 + i * step, z = z0 + j * step;
     const L = landHeight(creek, x, z);
     const k = j * nx + i;
-    inside[k] = L.s > S_MIN + 0.3 && L.s < S_MAX - 0.3 && Math.abs(L.d) < 9.7 ? 1 : 0;
+    inside[k] = L.inside ? 1 : 0;
     pos[k * 3] = x; pos[k * 3 + 1] = L.h - 0.04; pos[k * 3 + 2] = z;
     grassColor(x, z, c);
     if (L.ad > 30) c.lerp(new THREE.Color(0.24, 0.32, 0.15), smoothstep(30, 70, L.ad));
@@ -201,8 +244,8 @@ export function buildFarTerrain(creek, quality) {
 }
 
 // ---------------------------------------------------------------- rocks
-function rockGeometry(seed) {
-  let g = new THREE.IcosahedronGeometry(1, 3);
+function rockGeometry(seed, detail = 2) {
+  let g = new THREE.IcosahedronGeometry(1, detail);
   g.deleteAttribute('normal'); g.deleteAttribute('uv');
   g = mergeVertices(g);
   const p = g.attributes.position;
@@ -229,7 +272,7 @@ export function buildRocks(creek) {
   const meshes = [];
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), ps = new THREE.Vector3();
   groups.forEach((list, vi) => {
-    const mat = new THREE.MeshStandardMaterial({ color: 0x8a8780, map: detail, roughness: 0.88 });
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: detail, roughness: 0.88 });
     mat.onBeforeCompile = (sh) => {
       sh.vertexShader = sh.vertexShader
         .replace('#include <common>', '#include <common>\nattribute float aWaterY;\nattribute float aMoss;\nvarying float vWaterY;\nvarying float vMoss;\nvarying vec3 vWPos;\nvarying vec3 vWNorm;')
@@ -248,7 +291,12 @@ export function buildRocks(creek) {
     };
     const mesh = new THREE.InstancedMesh(variants[vi], mat, list.length);
     const wy = new Float32Array(list.length), moss = new Float32Array(list.length);
+    const cc = new THREE.Color();
+    const COB = [[0.62, 0.62, 0.62], [0.5, 0.56, 0.64], [0.7, 0.64, 0.55], [0.44, 0.45, 0.47], [0.78, 0.76, 0.72]];
     list.forEach((r, i) => {
+      if (r.tag === 'cobble') { const q = COB[Math.floor(rnd() * COB.length)]; cc.setRGB(q[0], q[1], q[2]); }
+      else cc.setRGB(0.54, 0.53, 0.5).multiplyScalar(0.92 + rnd() * 0.16);
+      mesh.setColorAt(i, cc);
       e.set(rnd() * 6.28, rnd() * 6.28, rnd() * 0.4);
       q.setFromEuler(e);
       const f = 0.95 + rnd() * 0.1;
@@ -258,7 +306,7 @@ export function buildRocks(creek) {
       mesh.setMatrixAt(i, m4);
       const wl = creek.waterLevel(r.s, r.d);
       wy[i] = wl > -1e8 ? wl : creek.y0(r.s) + (creek.inChannel(r.s, r.d, 0.4) ? 0 : -50);
-      moss[i] = r.tag === 'boulder' || r.tag === 'bank' ? 0.4 + rnd() * 0.6 : 0.15;
+      moss[i] = r.tag === 'boulder' || r.tag === 'bank' ? 0.4 + rnd() * 0.6 : r.tag === 'cobble' ? 0 : 0.15;
     });
     mesh.geometry = mesh.geometry.clone();
     mesh.geometry.setAttribute('aWaterY', new THREE.InstancedBufferAttribute(wy, 1));
@@ -271,21 +319,22 @@ export function buildRocks(creek) {
 }
 
 // ---------------------------------------------------------------- vegetation
-export function buildVegetation(creek, quality) {
+export function buildVegetation(creek, quality, farTrees = true) {
   const group = new THREE.Group();
   const rnd = mulberry32(5150);
-  const nTrees = quality === 'low' ? 220 : 480;
+  const B = worldBounds(creek, 80);
+  const nTrees = farTrees ? Math.round(((B.x1 - B.x0) * (B.z1 - B.z0)) / (quality === 'low' ? 260 : 120)) : 0;
   const trunks = [], cones = [], crowns = [];
   const keepClear = (L) => {
-    for (const st of STARTS) if (Math.abs(L.s - st.s) < 2.5 && L.d > creek.c(st.s)) return true;
+    for (const st of STARTS) if (!st.cr && Math.abs(L.s - st.s) < 2.5 && L.d > creek.c(st.s)) return true;
     if (Math.abs(L.s - S_FINISH) < 3) return true;
     return false;
   };
   let guard = 0;
-  while (trunks.length < nTrees && guard++ < 20000) {
-    const x = -80 + rnd() * 160, z = -285 + rnd() * 330;
+  while (trunks.length < nTrees && guard++ < nTrees * 40) {
+    const x = B.x0 + rnd() * (B.x1 - B.x0), z = B.z0 + rnd() * (B.z1 - B.z0);
     const L = landHeight(creek, x, z);
-    if (L.ad < 9.5 || keepClear(L)) continue;
+    if (L.inside || L.ad < 9.5 || keepClear(L)) continue;
     if (L.ad < 9 && rnd() < 0.5) continue;
     const conifer = rnd() < 0.55;
     const hgt = (conifer ? 7 : 5) + rnd() * 6;
@@ -341,7 +390,8 @@ export function buildVegetation(creek, quality) {
   for (const m of [trunkMesh, coneMesh, crownMesh]) { m.castShadow = true; m.receiveShadow = true; group.add(m); }
 
   // grass tufts on the banks
-  const nGrass = quality === 'low' ? 1200 : quality === 'medium' ? 2600 : 4200;
+  const S_MIN = creek.sMin, S_MAX = creek.sMax;
+  const nGrass = Math.round((S_MAX - S_MIN) * (quality === 'low' ? 4.5 : quality === 'medium' ? 9 : 14));
   const gtex = grassTexture();
   const gGeo = new THREE.PlaneGeometry(1, 1);
   gGeo.translate(0, 0.5, 0);
@@ -364,7 +414,7 @@ export function buildVegetation(creek, quality) {
     if (B.mat === MAT.ROCK || B.mat === MAT.GRAVEL && rnd() < 0.8) continue;
     if (B.h < creek.y0(sv) + 0.04) continue;
     let skip = false;
-    for (let k = 0; k < STARTS.length; k++) { const pad = creek.pads[k]; if (sv > pad.s0 - 0.2 && sv < pad.s1 + 0.2 && side > 0 && Math.abs(dd - c) < 2.4) skip = true; }
+    for (const pad of creek.pads) { if (sv > pad.s0 - 0.2 && sv < pad.s1 + 0.2 && side > 0 && Math.abs(dd - c) < 2.4) skip = true; }
     if (Math.abs(sv - S_FINISH) < 1.4 && Math.abs(dd - c) < 1.6) skip = true;
     if (skip) continue;
     creek.worldXZ(sv, dd, pp);

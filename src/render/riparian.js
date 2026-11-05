@@ -2,25 +2,26 @@
 // tangled shrubs, bare branches, fallen wood and undergrowth. Built in chunks along the
 // creek so distant parts are culled. Openings follow the field references (the Clearing).
 import * as THREE from 'three';
-import { S_MIN, S_MAX } from '../core/creek.js';
 import { STARTS, S_FINISH } from '../core/config.js';
 import { WORKSHOP } from '../core/game.js';
 import { mulberry32, fbm } from '../core/noise.js';
 import { barkTexture, grassTexture } from './textures.js';
 
-/** Density of creek-side vegetation by place (1 = normal woodland). */
-function density(s, side) {
+/** Density of creek-side vegetation by place (1 = normal woodland). side < 0 is the east bank. */
+function density(creek, s, side) {
+  if (!creek.isMain) return 1.7; // Crawfish Springs: deep forest, tight, layered, shaded
   let k = 1;
-  if (s > 80) k = 0.55; // lower creek: comparatively sunny, water in a carved bed
-  if (s > 54 && s < 68) k = 1.7; // Crawfish Springs: tight, layered, shaded
-  if (s > 50.3 && s < 54) k = side < 0 ? 0 : 0.85; // the Clearing: grasses left, wooded Shelf right
-  if (s > 72.4 && s < 75.2 && side > 0) k = 0.3; // Flat Rocks slabs
-  if (s < 0) k = 1.25; // headwaters
+  if (side < 0 && s > 34 && s < 518) k = 1.15; // the wooded Continental Shelf along the east bank
+  if (s > 469) k = 0.55; // lower creek below the falls: comparatively sunny, water in a carved bed
+  if (s > 96.2 && s < 100) k = side > 0 ? 0 : 0.85; // the Clearing: grasses on the west, the wooded Shelf east
+  if (s > 138 && s < 148 && side > 0) k = 1.4; // Flat Rocks: dense willows close behind the ledge (the ground photo)
+  if (s < 34) k = 1.25; // the Farlands
   if (s < -138) k = 1.4;
   return k;
 }
 
-export function buildRiparian(creek, quality) {
+export function buildRiparian(creek, quality, main = null) {
+  const S_MIN = creek.sMin, S_MAX = creek.sMax;
   const q = quality === 'low' ? 0.4 : quality === 'medium' ? 0.7 : 1;
   const rnd = mulberry32(8080);
   const root = new THREE.Group();
@@ -41,27 +42,33 @@ export function buildRiparian(creek, quality) {
   const shrubGeo = jitter(new THREE.IcosahedronGeometry(1, 1), 0.4, 5);
   const twigGeo = new THREE.CylinderGeometry(0.5, 1, 1, 5, 1); twigGeo.translate(0, 0.5, 0);
   const cardGeo = crossed();
+  const L2 = {};
   const keep = (s, d) => {
     const c = creek.c(s);
+    if (main) { const p = creek.worldXZ(s, d); main.locate(p.x, p.z, -1, L2); if (Math.abs(L2.d) < 9.8 && L2.s > main.sMin && L2.s < main.sMax) return false; }
+    if (creek.gully) { const gd = creek.gullyDist(s, d); if (gd && gd.dist < 1.4) return false; }
+    if (creek.ledge && creek.ledgeZone(s, d) >= 0) return false; // Flat Rocks: the bar, the recess and the ledge top stay open
+    if (s > creek.alt.s0 && s < creek.alt.s1 && Math.abs(d - creek.altD(s)) < 0.7) return false; // the alternate route
     for (const st of STARTS) {
-      const ss = st.s;
+      const ss = creek.siteS(st);
+      if (ss === null) continue;
       if (s > ss - 2.4 && s < ss + 2.6 && d > c && d < c + creek.wR(ss) + 3.4) return false; // factory pads and the spawn spot
       if (Math.abs(s - ss) < 0.8 && d < c && d > c - creek.wL(ss) - 1.0) return false; // launch markers
       if (Math.abs(s - (ss - 1.9)) < 0.7 && d > c && Math.abs(d - (c + creek.wR(ss) + 1.1)) < 0.8) return false; // map boards
     }
-    if (s > S_FINISH - 2.6 && s < S_FINISH + 4 && Math.abs(d - c) < 3.2) return false; // finish station
-    if (Math.abs(s - WORKSHOP.s) < 2.2 && d < c && d > c - creek.wL(s) - 3.2) return false; // Bank Workshop yard
-    if (s > 55.4 && s < 60 && d > c + 0.9 && d < c + 3.0) return false; // double ponds
+    if (creek.isMain && s > S_FINISH - 2.6 && s < S_FINISH + 4 && Math.abs(d - c) < 3.2) return false; // finish station
+    if (creek.isMain && Math.abs(s - WORKSHOP.s) < 2.2 && d > c && d < c + creek.wR(s) + 3.2) return false; // Bank Workshop yard
+    if (!creek.isMain && s > 55.4 && s < 60 && d > c + 0.9 && d < c + 3.0) return false; // double ponds
     return true;
   };
-  const chunk = 12;
+  const chunk = 20;
   const m4 = new THREE.Matrix4(), qt = new THREE.Quaternion(), sc = new THREE.Vector3(), pv = new THREE.Vector3(), col = new THREE.Color();
   const up = new THREE.Vector3(0, 1, 0);
   for (let s0 = S_MIN + 0.5; s0 < S_MAX - 1; s0 += chunk) {
     const trunks = [], crowns = [], shrubs = [], twigs = [], logs = [], cards = [];
     for (const side of [-1, 1]) {
       for (let s = s0; s < Math.min(S_MAX - 1, s0 + chunk); s += 0.25) {
-        const k = density(s, side) * q;
+        const k = density(creek, s, side) * q;
         const c = creek.c(s), w = side < 0 ? creek.wL(s) : creek.wR(s);
         // trees (about one per metre per bank in normal woodland)
         if (rnd() < 0.24 * k) {
@@ -118,11 +125,11 @@ export function buildRiparian(creek, quality) {
         }
       }
     }
-    // the Clearing: tall grasses and reeds on the left edge
-    if (s0 <= 53.8 && s0 + chunk >= 50.4) {
+    // the Clearing: tall grasses and reeds on the west edge
+    if (creek.isMain && s0 <= 99.8 && s0 + chunk >= 96.4) {
       for (let i = 0; i < 260 * q; i++) {
-        const s = 50.4 + rnd() * 3.4, c = creek.c(s);
-        const d = c - creek.wL(s) - 0.1 - rnd() * 4;
+        const s = 96.4 + rnd() * 3.4, c = creek.c(s);
+        const d = c + creek.wR(s) + 0.1 + rnd() * 4;
         const p = creek.worldXZ(s, d);
         cards.push({ x: p.x, y: creek.bedH(s, d) - 0.01, z: p.z, h: 0.6 + rnd() * 0.9, rot: rnd() * 6.28, hue: 0.3 + rnd() * 0.4 });
       }

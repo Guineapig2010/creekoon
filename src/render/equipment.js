@@ -135,11 +135,15 @@ export class Workshop {
     this.placeAt(k);
   }
 
+  /** The channel this factory stands on (Crawfish Springs is on its runoff stream). */
+  channel(k) { return STARTS[k].cr && this.creek.springs ? this.creek.springs : this.creek; }
+
   frameFor(k, out = {}) {
-    const cr = this.creek;
-    const pad = cr.pads[k];
+    const cr = this.channel(k);
+    const pad = cr.padByK[k];
     const s = pad.sC;
-    const c = cr.c(STARTS[k].s), wR = cr.wR(STARTS[k].s);
+    const ls = cr.siteS(STARTS[k]);
+    const c = cr.c(ls), wR = cr.wR(ls);
     const p = cr.worldXZ(s, c + wR + 1.05);
     const fr = cr.frame(s);
     out.pos = new THREE.Vector3(p.x, pad.y, p.z);
@@ -157,7 +161,7 @@ export class Workshop {
 
   buildChute(k) {
     this.chute.clear();
-    const ch = this.creek.chuteFor(k);
+    const ch = this.channel(k).chuteFor(k);
     const inv = new THREE.Matrix4().copy(this.group.matrixWorld).invert();
     const pts = [V(ch.R0), V(ch.M), V(ch.E)].map((p) => p.applyMatrix4(inv));
     this.chutePts = pts;
@@ -657,7 +661,8 @@ export class CreekEquipment {
     this.creek = creek;
     this.scene = scene;
     this.items = {};
-    const cols = creek.colliders;
+    const cols = [...creek.colliders, ...(creek.springs ? creek.springs.colliders : [])];
+    const spr = creek.springs || creek;
     const groupMeshes = (group, mat) => {
       const g = new THREE.Group();
       for (const c of cols) {
@@ -725,7 +730,7 @@ export class CreekEquipment {
     }
     {
       const g = groupMeshes('debrisScreen', MATS.darkSteel);
-      const pts = creek.screenPts.map(V);
+      const pts = spr.screenPts.map(V);
       for (let i = 0; i < pts.length; i++) g.add(rod(pts[i].clone().setY(pts[i].y - 0.5), pts[i].clone().setY(pts[i].y + 0.18), 0.012, MATS.darkSteel));
       for (let i = 0; i < pts.length - 1; i++) {
         const a = pts[i], b = pts[i + 1];
@@ -749,6 +754,7 @@ export class CreekEquipment {
     // clearing arm
     {
       const g = new THREE.Group();
+      const creek = spr;
       const s = ARM.pivotS, c = creek.c(s);
       const d = c + creek.wR(s) + 0.25;
       const p = creek.worldXZ(s, d);
@@ -825,14 +831,14 @@ export class CreekEquipment {
   }
 
   spotPos(id) {
-    const cr = this.creek;
     const spots = {
-      rootRail: [93.2, 1], gravelMat: [95.4, -1], splashGuard: [85.6, -1], poolGuide: [88.2, 1], catchRamp: [79.0, -1],
-      debrisScreen: [57.5, -1], spillRail: [64.5, 1], alderBypass: [46.5, -1], landingBoards: [9.6, 1], clearingArm: [ARM.pivotS + 0.4, 1],
+      rootRail: [549.7, 1], gravelMat: [551.9, -1], splashGuard: [450.4, -1], poolGuide: [453.0, 1], catchRamp: [329.0, -1],
+      debrisScreen: [57.5, -1, 1], spillRail: [64.5, 1, 1], alderBypass: [46.5, -1], landingBoards: [9.6, 1], clearingArm: [ARM.pivotS + 0.4, 1, 1],
     };
     const sp = spots[id];
     if (!sp) return null;
-    const [s, side] = sp;
+    const [s, side, onSpr] = sp;
+    const cr = onSpr && this.creek.springs ? this.creek.springs : this.creek;
     const c = cr.c(s);
     const d = c + side * ((side < 0 ? cr.wL(s) : cr.wR(s)) + 0.35);
     const p = cr.worldXZ(s, d);
@@ -869,7 +875,8 @@ export class LaunchMarkers {
     mats();
     this.creek = creek;
     this.markers = STARTS.map((st, k) => {
-      const s = st.s, c = creek.c(s);
+      const creek = st.cr && this.creek.springs ? this.creek.springs : this.creek;
+      const s = creek.siteS(st), c = creek.c(s);
       const d = c - creek.wL(s) - 0.35;
       const p = creek.worldXZ(s, d);
       const y = creek.bedH(s, d);
@@ -898,7 +905,7 @@ export class LaunchMarkers {
       m.flag.material.color.set(state === 'sel' ? 0xf2c230 : state === 'open' ? 0x3a8f4a : state === 'next' ? 0xff8a2a : 0x777777);
       if (m.label) m.g.remove(m.label);
       const st = STARTS[k];
-      const lines = state === 'locked' || state === 'next' ? [st.name, `Unlock $${st.cost.toLocaleString()}`] : [st.name, `$${st.base}/ball · ~${Math.round(st.eta)}s`];
+      const lines = state === 'locked' || state === 'next' ? [st.name, `Unlock $${st.cost.toLocaleString()}`] : [st.name, `$${st.base}/ball · ~${st.eta >= 90 ? (st.eta / 60).toFixed(1) + ' min' : Math.round(st.eta) + ' s'}`];
       m.label = sprite(labelTexture(lines, { w: 640, h: 170, font: 'bold 50px Georgia, serif', bg: state === 'sel' ? '#5a4410' : '#2d3a1f' }), 1.1, 0.29);
       m.label.position.set(0, 1.4, 0);
       m.g.add(m.label);

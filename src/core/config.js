@@ -6,9 +6,10 @@ export const BALL_M = 0.058; // 58 g
 export const PHYS_DT = 1 / 120;
 export const MANUAL_COOLDOWN = 2.5;
 
-// Channel coordinate s = metres downstream along the valley. The finish gate is permanent.
-export const S_FINISH = 98.5;
-export const S_BASKET = 99.25;
+// Channel coordinate s = metres downstream along the creek (laid out along the creator's map at
+// half scale, see layout.js). The finish gate is permanent.
+export const S_FINISH = 555.0;
+export const S_BASKET = 555.75;
 
 // Launch sites, downstream first. `id` is the stable save identifier.
 // `after`: the site that must be open before this one can be bought.
@@ -16,34 +17,37 @@ export const S_BASKET = 99.25;
 // TUNING: launch positions (s, metres from the top of the model), costs, base payouts and
 // target run times. New-reach positions are game geography (layer 'game'); Flat Rocks is a
 // PROVISIONAL placement of the mapped historical start on the Shelf route.
+// Sites are listed downstream first (by run length). `cr: 'springs'` marks a site on the Crawfish
+// Springs runoff stream: `ls` is its launch position on that stream and `s` the confluence with the
+// creek, where its balls join the main run.
 export const STARTS = [
-  { id: 'grounds', name: 'Old Rolling Grounds', s: 92.0, cost: 0, base: 10, eta: 5.5, target: '5 s', after: null, layer: 'base',
-    blurb: 'A short launch chute, exposed roots, and a gravel-bed bend.' },
-  { id: 'waterfall', name: 'Waterfall Run', s: 80.7, cost: 350, base: 30, eta: 16, target: '14–18 s', after: 'grounds', layer: 'base',
-    blurb: 'A rock chute to the route split. The primary creek-right route goes over the falls; the alternate route steps down on the left.' },
-  { id: 'flatrocks', name: 'Flat Rocks', s: 73.6, cost: 900, base: 45, eta: 23, target: '20–26 s', after: 'waterfall', layer: 'field',
-    blurb: 'The usual historical start: broad, low slabs with an undercut at the water. Its game placement on the Shelf route is approximate.' },
-  { id: 'shelf', name: 'Continental Shelf', s: 68.0, cost: 1500, base: 65, eta: 31, target: '26–34 s', after: 'waterfall', layer: 'base',
-    blurb: 'A ledge along the creek’s right side near the waterfall. A short exposed drop in the Folk Draft feeds the waterfall approach.' },
-  { id: 'springs', name: 'Crawfish Springs', s: 54.0, cost: 6500, base: 120, eta: 48, target: '42–52 s', after: 'shelf', layer: 'base',
-    blurb: 'A shaded spring pool above the Shelf, a double-pond runoff on the right bank, and a narrow rocky spillway.' },
-  { id: 'alder', name: 'Alder Bend', s: 34.0, cost: 22000, base: 220, eta: 72, target: '60–74 s', after: 'springs', layer: 'base',
-    blurb: 'An undercut bank, a split around a gravel island, then the open Clearing before the Springs.' },
-  { id: 'gorge', name: 'Upper Gorge', s: 0.0, cost: 75000, base: 400, eta: 100, target: '85–105 s', after: 'alder', layer: 'base',
-    blurb: 'Two steep rock steps and a short stretch of whitewater above Alder Bend.' },
-  { id: 'slate', name: 'Slate Steps', s: -16, cost: 140000, base: 620, eta: 110, target: '100–120 s', after: 'gorge', layer: 'game',
+  { id: 'grounds', name: 'Old Rolling Grounds', s: 548.5, cost: 0, base: 10, eta: 6, target: '5–8 s', after: null, layer: 'base',
+    blurb: 'A short launch chute just above the trail-entrance finish, with exposed roots and a gravel-bed bend.' },
+  { id: 'waterfall', name: 'Waterfall Run', s: 405.0, cost: 350, base: 30, eta: 117, target: '1.8–2.1 min', after: 'grounds', layer: 'field',
+    blurb: 'Above the route split. The primary creek-right route goes over the falls 33 m below the split; the alternate branch steps down on the creek-left.' },
+  { id: 'springs', name: 'Crawfish Springs', s: 497.1, ls: 54.0, cr: 'springs', cost: 1500, base: 65, eta: 117, target: '1.8–2.1 min', after: 'waterfall', layer: 'field',
+    blurb: 'A secondary stream: the spring pool and deep-forest double ponds up on the Shelf, then a runoff chute down through the woods into the creek below the falls.' },
+  { id: 'shelf', name: 'Continental Shelf', s: 318.0, cost: 6500, base: 120, eta: 184, target: '2.9–3.3 min', after: 'springs', layer: 'field',
+    blurb: 'The long reach under the Continental Shelf, the rock terrace along the creek’s east bank. A short drop in the Folk Draft below the launch.' },
+  { id: 'flatrocks', name: 'Flat Rocks', s: 148.9, cost: 12000, base: 170, eta: 307, target: '4.9–5.4 min', after: 'shelf', layer: 'field',
+    blurb: 'The usual historical start, by the big flat rocks: a thick sandstone ledge with a dark undercut on the west bank, a cobble bar and shallow water, the Shelf across the creek.' },
+  { id: 'alder', name: 'Alder Bend', s: 34.0, cost: 22000, base: 220, eta: 388, target: '6.2–6.8 min', after: 'flatrocks', layer: 'base',
+    blurb: 'Just inside the Farlands entrance: an undercut bank and a split around a gravel island, then the Clearing’s deep pools.' },
+  { id: 'gorge', name: 'Upper Gorge', s: 0.0, cost: 75000, base: 400, eta: 408, target: '6.5–7.1 min', after: 'alder', layer: 'base',
+    blurb: 'In the Farlands: two steep rock steps and a short stretch of whitewater above Alder Bend.' },
+  { id: 'slate', name: 'Slate Steps', s: -16, cost: 140000, base: 620, eta: 435, target: '7–7.6 min', after: 'gorge', layer: 'game',
     blurb: 'Three irregular slabs and shallow pocket pools. A fast roll can bounce out; a clean line glances off the slabs.' },
-  { id: 'willow', name: 'Willow Narrows', s: -34, cost: 230000, base: 850, eta: 128, target: '118–138 s', after: 'slate', layer: 'game',
+  { id: 'willow', name: 'Willow Narrows', s: -34, cost: 230000, base: 850, eta: 444, target: '7.1–7.8 min', after: 'slate', layer: 'game',
     blurb: 'A fast pinch between roots. Balls bunch at the exit, so feeder speed only helps once the pinch is fixed.' },
-  { id: 'splitstone', name: 'Splitstone Fork', s: -56, cost: 365000, base: 1140, eta: 147, target: '135–158 s', after: 'willow', layer: 'game',
+  { id: 'splitstone', name: 'Splitstone Fork', s: -56, cost: 365000, base: 1140, eta: 465, target: '7.5–8.1 min', after: 'willow', layer: 'game',
     blurb: 'A direct rocky lane and a longer calm lane around an island. Both rejoin before Willow Narrows.' },
-  { id: 'longeddy', name: 'Long Eddy Basin', s: -78, cost: 560000, base: 1500, eta: 166, target: '153–179 s', after: 'splitstone', layer: 'game',
+  { id: 'longeddy', name: 'Long Eddy Basin', s: -78, cost: 560000, base: 1500, eta: 485, target: '7.8–8.4 min', after: 'splitstone', layer: 'game',
     blurb: 'A wide bend with a visible recirculation and a fast tongue of water near the outside bank.' },
-  { id: 'spillway', name: 'Spillway Falls', s: -102, cost: 830000, base: 1950, eta: 189, target: '174–204 s', after: 'longeddy', layer: 'game',
+  { id: 'spillway', name: 'Spillway Falls', s: -102, cost: 830000, base: 1950, eta: 509, target: '8.2–8.8 min', after: 'longeddy', layer: 'game',
     blurb: 'A 3.2 m waterfall onto a rock apron and a deep pool.' },
-  { id: 'sluice', name: 'Boulder Sluice', s: -126, cost: 1220000, base: 2550, eta: 212, target: '196–228 s', after: 'spillway', layer: 'game',
+  { id: 'sluice', name: 'Boulder Sluice', s: -126, cost: 1220000, base: 2550, eta: 527, target: '8.5–9.1 min', after: 'spillway', layer: 'game',
     blurb: 'Staggered rocks in two lanes around a rock rib, recombining at a gravel bar.' },
-  { id: 'coldspring', name: 'Cold Spring Headwaters', s: -148, cost: 1800000, base: 3300, eta: 238, target: '220–255 s', after: 'sluice', layer: 'game',
+  { id: 'coldspring', name: 'Cold Spring Headwaters', s: -148, cost: 1800000, base: 3300, eta: 563, target: '9.1–9.8 min', after: 'sluice', layer: 'game',
     blurb: 'The top of the creek: a calm spring pool narrowing into a steep outflow.' },
 ];
 export const SITE_INDEX = Object.fromEntries(STARTS.map((s, i) => [s.id, i]));
@@ -51,7 +55,7 @@ export const SITE_INDEX = Object.fromEntries(STARTS.map((s, i) => [s.id, i]));
 // Merge checkpoints after a fork rejoins (either lane is legal).
 // TUNING: merge checkpoints where forks rejoin (each lane must pass them to be paid).
 export const MERGES = [
-  { s: 90.3, name: 'Waterfall route merge' },
+  { s: 468.8, name: 'Waterfall route merge' },
   { s: 50.6, name: 'Alder island rejoin' },
   { s: -40.0, name: 'Splitstone rejoin' },
   { s: -107.6, name: 'Sluice gravel bar' },
@@ -59,6 +63,7 @@ export const MERGES = [
 export const ALDER_REJOIN_S = 50.6;
 
 export function checkpointsFor(startIndex) {
+  // a Springs-stream site joins the creek at its `s` (the confluence); checkpoints start below it
   const s0 = STARTS[startIndex].s;
   const cps = [];
   for (const st of STARTS) if (st.s > s0 + 0.01) cps.push(st.s);
@@ -68,13 +73,15 @@ export function checkpointsFor(startIndex) {
 }
 
 // Reaches for the flow monitor, congestion and backpressure (downstream first).
-// TUNING: safe balls in flight per reach (backpressure caps for fair release).
+// TUNING: safe balls in flight per reach (backpressure caps for fair release). Long open reaches
+// hold about 1.5 balls per metre; narrow spots (Willow Narrows) are limited by their pinch.
 export const REACHES = [
-  { id: 'grounds', name: 'Old Rolling Grounds', s0: 92.0, s1: 99.3, cap: 26 },
-  { id: 'waterfall', name: 'Waterfall Run', s0: 80.7, s1: 92.0, cap: 34 },
-  { id: 'shelf', name: 'Continental Shelf', s0: 68.0, s1: 80.7, cap: 34 },
-  { id: 'springs', name: 'Crawfish Springs', s0: 54.0, s1: 68.0, cap: 46 },
-  { id: 'alder', name: 'Alder Bend & the Clearing', s0: 34.0, s1: 54.0, cap: 50 },
+  { id: 'grounds', name: 'Old Rolling Grounds', s0: 547.0, s1: 565, cap: 26 },
+  { id: 'confluence', name: 'Springs confluence', s0: 469.0, s1: 547.0, cap: 120 },
+  { id: 'waterfall', name: 'Waterfall split & falls', s0: 405.0, s1: 469.0, cap: 90 },
+  { id: 'shelf', name: 'Continental Shelf', s0: 147.0, s1: 405.0, cap: 390 },
+  { id: 'flatrocks', name: 'Flat Rocks', s0: 100.0, s1: 147.0, cap: 70 },
+  { id: 'alder', name: 'Alder Bend & the Clearing', s0: 34.0, s1: 100.0, cap: 100 },
   { id: 'gorge', name: 'Upper Gorge', s0: 0, s1: 34.0, cap: 70 },
   { id: 'slate', name: 'Slate Steps', s0: -16, s1: 0, cap: 34 },
   { id: 'willow', name: 'Willow Narrows', s0: -34, s1: -16, cap: 34, capStock: 16, capFix: 'willowFlare' }, // TUNING: the stock root pinch is only safe at 16 balls in flight
@@ -83,10 +90,21 @@ export const REACHES = [
   { id: 'spillway', name: 'Spillway Falls', s0: -102, s1: -78, cap: 50 },
   { id: 'sluice', name: 'Boulder Sluice', s0: -126, s1: -102, cap: 50 },
   { id: 'coldspring', name: 'Cold Spring Headwaters', s0: -152, s1: -126, cap: 50 },
+  // the Springs runoff stream (its own channel; s in stream coordinates)
+  { id: 'springs', name: 'Crawfish Springs runoff', s0: 52.6, s1: 148, cap: 120, cr: 'springs' },
 ];
+export const SPRINGS_REACH = REACHES.length - 1;
+/** Main-creek reach index at s. */
 export function reachAt(s) {
-  for (let i = 0; i < REACHES.length; i++) if (s >= REACHES[i].s0 && s < REACHES[i].s1) return i;
-  return s >= 99.3 ? 0 : REACHES.length - 1;
+  for (let i = 0; i < REACHES.length; i++) if (!REACHES[i].cr && s >= REACHES[i].s0 && s < REACHES[i].s1) return i;
+  return s >= 565 ? 0 : SPRINGS_REACH - 1;
+}
+/** Reach indices a ball launched at site k passes through, launch reach first. */
+export function reachChain(k) {
+  const st = STARTS[k];
+  const out = st.cr ? [SPRINGS_REACH] : [];
+  for (let r = reachAt(st.s); r >= 0; r--) out.push(r);
+  return out;
 }
 
 // ---------------------------------------------------------------- recipes

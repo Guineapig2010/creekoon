@@ -572,7 +572,9 @@ export class UI {
     if (this.layers.tycoon) {
       STARTS.forEach((st, k) => {
         const site = g.sites[k];
-        const p = v.worldAt(st.s, cr.c(st.s) + cr.wR(st.s) + 1.0, 0.4);
+        const ch = st.cr && cr.springs ? cr.springs : cr, ls = ch.siteS(st);
+        const q = ch.worldXZ(ls, ch.c(ls) + ch.wR(ls) + 1.0);
+        const p = { x: q.x, y: Math.max(ch.bedH(ls, ch.c(ls) + ch.wR(ls) + 1.0), ch.y0(ls)) + 0.4, z: q.z };
         const status = site.open ? (site.reason ? site.reason : `${site.stats.launched} launched · ${site.hopper.length + site.post.length} queued`) : g.unlockable(k) ? `for sale ${fmtK(st.cost)}` : 'locked';
         items.push({ key: 's' + k, p, html: `<div class="ml site ${site.open ? 'open' : ''} ${k === g.sel ? 'sel' : ''} ${st.layer === 'game' ? 'game' : ''}" data-site="${k}"><b>${esc(st.name)}</b><small>${esc(status)}</small></div>` });
       });
@@ -582,9 +584,10 @@ export class UI {
         if (L.unmapped) continue;
         items.push({ key: 'f' + L.id, p: { x: L.x, y: L.y + 0.2, z: L.z }, html: `<div class="ml note" data-note="${L.id}">◆ ${esc(L.name)} <small>approx.</small></div>` });
       }
-      const drawP = v.worldAt(77.8, 1.4, 1.5);
+      const drawP = v.worldAt(327.8, 1.4, 1.5);
       items.push({ key: 'draft', p: drawP, html: `<div class="ml draftlab">⬇ Folk Draft (downdraft)</div>` });
-      const rotP = v.worldAt(58.6, cr.c(58.6) + 1.4, 0.3);
+      const rc = cr.springs || cr, rq = rc.worldXZ(58.6, rc.c(58.6) + 1.4);
+      const rotP = { x: rq.x, y: rc.y0(58.6) + 0.3, z: rq.z };
       items.push({ key: 'rot', p: rotP, html: `<div class="ml rotlab">Code Rot observations (strongest)</div>` });
     }
     const seen = new Set();
@@ -806,8 +809,8 @@ export class UI {
     }
     if (g.owned.has('springsSampler')) {
       const rot = g.lossBySpot.codeRot || 0;
-      const stallsRot = g.stallLog.filter(([, s]) => s > 57.6 && s < 60.4).length;
-      const stallsSpr = g.stallLog.filter(([, s]) => s > 54 && s < 68).length;
+      const stallsRot = g.stallLog.filter(([, s, , c]) => c === 1 && s > 57.6 && s < 60.4).length;
+      const stallsSpr = g.stallLog.filter(([, s, , c]) => c === 1).length;
       parts.push(`<h3>Springs Bank Sampler</h3><table class="rec"><tr><th>Code Rot observations</th><td>${stallsRot} recent delays in the Code Rot pocket · ${rot} balls lost there (simulated)</td></tr><tr><th>Normal current</th><td>${stallsSpr - stallsRot} recent stalls elsewhere in the Springs</td></tr><tr><th>Draft exposure</th><td>${g.stats.draftCatch} balls dropped into the lower catch area below the Shelf</td></tr></table><p class="hint">Simulated readings for the game’s Springs reach. They make no claim about the real creek or its crayfish.</p>`);
     } else if (g.owned.has('draftRibbon')) parts.push(`<h3>Shelf Draft Ribbon</h3><p>${g.stats.draftCatch} balls have dropped into the lower catch area below the Shelf.</p>`);
     const T = g.trial;

@@ -168,15 +168,15 @@ export class Effects {
     }
     // ---- Folk Draft: descending mist and falling leaves at the Continental Shelf
     if (rnd() < dt * 6 * mult) {
-      const s = 76.8 + rnd() * 2.6, d = 0.5 + rnd() * 2.2;
+      const s = 326.8 + rnd() * 2.6, d = 0.5 + rnd() * 2.2;
       const p = cr.worldXZ(s, d, {});
-      const y = cr.y0(78.3) + 1.2 + rnd() * 1.5;
+      const y = cr.y0(328.3) + 1.2 + rnd() * 1.5;
       this.mist.spawn({ x: p.x, y, z: p.z, vx: 0, vy: -0.6, vz: 0, size: 0.25 + rnd() * 0.3, alpha: 0, a0: 0.16, life: 2.5, grow: 0.2, wind: true });
     }
     if (rnd() < dt * 0.9) {
-      const s = 76.5 + rnd() * 3, d = 0.3 + rnd() * 2.5;
+      const s = 326.5 + rnd() * 3, d = 0.3 + rnd() * 2.5;
       const p = cr.worldXZ(s, d, {});
-      this.leaves.spawn({ x: p.x, y: cr.y0(78.3) + 2.5 + rnd() * 2, z: p.z, size: 0.05, alpha: 1, rot: rnd() * 6.28, life: 50, hint: -1, vy: -0.4, air: true, spin: 2 });
+      this.leaves.spawn({ x: p.x, y: cr.y0(328.3) + 2.5 + rnd() * 2, z: p.z, size: 0.05, alpha: 1, rot: rnd() * 6.28, life: 50, hint: -1, vy: -0.4, air: true, spin: 2 });
     }
     if (rnd() < dt * 0.25 && this.leaves.items.length < 160) this.spawnLeafOnWater(-4 + rnd() * 108);
 

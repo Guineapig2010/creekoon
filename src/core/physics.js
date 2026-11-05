@@ -26,7 +26,7 @@ export function makeBall(id, spec, seed) {
     id, spec,
     x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, wx: 0, wy: 0, wz: 0,
     qx: 0, qy: 0, qz: 0, qw: 1,
-    hint: -1, s: 0, d: 0,
+    hint: -1, s: 0, d: 0, cr: 0, // cr: 0 = main creek, 1 = Crawfish Springs stream
     rs: seed >>> 0,
     wet: 0, sub: 0, ground: false, groundMat: -1,
     speedAvg: 1, stallT: 0, age: 0,
@@ -37,8 +37,10 @@ export function makeBall(id, spec, seed) {
 }
 
 export class PhysicsWorld {
-  constructor(creek) {
+  constructor(creek, springs = null) {
     this.creek = creek;
+    this.springs = springs;
+    this.loc2 = {};
     this.balls = [];
     this.t = 0;
     this.disabled = new Set(['rootRail', 'splashGuard', 'poolGuide', 'catchRamp', 'spillRail', 'alderBypass', 'landingBoards', 'debrisScreen',
@@ -76,9 +78,21 @@ export class PhysicsWorld {
     this.ballBall();
   }
 
+  /** Channel a ball is in (the Springs stream hands its balls to the creek at the confluence). */
+  creekOf(b) { return b.cr && this.springs ? this.springs : this.creek; }
+
   stepBall(b, dt) {
-    const cr = this.creek;
-    const L = cr.locate(b.x, b.z, b.hint, this.loc);
+    let cr = this.creekOf(b);
+    let L = cr.locate(b.x, b.z, b.hint, this.loc);
+    if (b.cr && L.s > cr.sMax - 0.6) {
+      const L2 = this.creek.locate(b.x, b.z, -1, this.loc2);
+      if (Math.abs(L2.d) < 9.6) {
+        b.cr = 0; cr = this.creek;
+        L = cr.locate(b.x, b.z, L2.idx, this.loc);
+        b.prevS = L.s; b.maxS = L.s; b.progS = L.s;
+        this.events.push({ type: 'joined', id: b.id });
+      }
+    }
     b.hint = L.idx; b.s = L.s; b.d = L.d;
     const mass = BALL_M + (b.spec & BF.WATER ? 0.003 : 0.012) * b.wet;
 
@@ -189,7 +203,7 @@ export class PhysicsWorld {
   }
 
   collideBed(b, dt, mass, L) {
-    const cr = this.creek;
+    const cr = this.creekOf(b);
     const loc = cr.locate(b.x, b.z, b.hint, this.loc);
     const B = cr.bedAt(loc.s, loc.d, this.bedTmp);
     const tx = loc.tx, tz = loc.tz, nx0 = -tz, nz0 = tx;
@@ -332,7 +346,7 @@ export class PhysicsWorld {
         // patchy gravel: random slowdowns
         const n = Math.sin(b.x * 37.1 + b.z * 11.3) * Math.sin(b.z * 29.7 - b.x * 7.9);
         crr *= 1 + 2.2 * Math.max(0, n);
-        if (b.s > this.creek.roughPatch.s0 && b.s < this.creek.roughPatch.s1) crr *= 2.5;
+        if (b.s > this.creekOf(b).roughPatch.s0 && b.s < this.creekOf(b).roughPatch.s1) crr *= 2.5;
       }
       crr *= 1 + 0.6 * b.wet;
       if (b.recipe === 2 && b.sub < BALL_R * 0.5) crr *= 1.2; // Soft-Core rolls slower through shallow dry stretches
