@@ -44,6 +44,9 @@
   - Balls more than about 40 m away ride the surface current on a simplified path, with
     each trouble spot's loss and hold-up odds (lower with its fix).
   - They become real balls again within about 30 m.
+  - The first 2.2.0 build gave each trouble spot 4–6% loss odds for streamed balls, so about
+    a third of the balls from the far sites vanished before the finish. The odds and the
+    streamed speed are now matched to the full physics.
   - Headless tests use full physics unless streaming is switched on.
 - **Finish basket.** When the basket and overflow crate are both full, the crew lifts balls
   out by hand and they count as completed, instead of backing up into the creek.
@@ -77,9 +80,10 @@
 
 ### Provisional
 
-- The streamed odds for each trouble spot (`TROUBLE_SPOTS` in `src/core/game.js`) are
-  first-pass tuning. Run times for far balls come out 10–25% above the listed targets with no
-  fixes.
+- The streamed odds for each trouble spot (`TROUBLE_SPOTS` in `src/core/game.js`) are matched
+  to full-physics runs. Over 900 s with every factory running, full physics lost 21 balls and
+  streaming lost 42, most of them at the Springs outlet in both cases. Farlands run times
+  match: 381 s streamed and 385 s with full physics.
 
 ## 2.1.0 — The creek laid out on the creator's map
 

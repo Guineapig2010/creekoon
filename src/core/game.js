@@ -22,23 +22,24 @@ const GEO2_IDS = ['grounds', 'waterfall', 'springs', 'shelf', 'flatrocks', 'alde
 // Trouble spots at real places on the creator's map. `cr: 'springs'` spots are on the Crawfish
 // Springs runoff stream (stream coordinates). Balls far from the player travel on a streamed
 // path and take each spot's odds instead of simulating it: `loss` and `delay` (seconds) with and
-// without the fix. TUNING: first-pass odds; balls near the player are fully simulated.
+// without the fix. TUNING: matched to full-physics runs (most spots lose well under 1 in 200
+// balls; the Springs outlet is the worst); balls near the player are fully simulated.
 export const TROUBLE_SPOTS = [
-  { id: 'root', s0: 549.1, s1: 550.7, fix: 'rootRail', label: 'the exposed root at the trail entrance', loss: [0.04, 0.004], delay: [3, 0.5] },
-  { id: 'gravel', s0: 550.7, s1: 552.9, fix: 'gravelMat', label: 'the rough gravel above the finish', loss: [0.02, 0.002], delay: [2, 0.3] },
-  { id: 'lip', s0: 449.8, s1: 452.4, fix: 'splashGuard', label: 'the lip of the falls', loss: [0.06, 0.01], delay: [2, 0.5] },
-  { id: 'pool', s0: 452.4, s1: 456.0, fix: 'poolGuide', also: ['spillSkimmer'], label: 'the plunge pool eddy', loss: [0.05, 0.01], delay: [8, 2] },
-  { id: 'split', s0: 416.6, s1: 420.0, fix: 'splitGate', label: 'the route split', loss: [0.02, 0.005], delay: [3, 1] },
-  { id: 'merge', s0: 466.0, s1: 470.0, fix: 'splitMergeRail', label: 'the waterfall route merge', loss: [0.02, 0.005], delay: [3, 1] },
-  { id: 'catch', s0: 326.0, s1: 330.5, fix: 'catchRamp', label: 'the Shelf drop', loss: [0.06, 0.01], delay: [4, 1] },
-  { id: 'deepPool', s0: 96.0, s1: 100.6, fix: 'basinBoom', also: ['basinVane', 'branchSweeper'], label: 'the Clearing’s deep pools', loss: [0.05, 0.01], delay: [15, 4] },
-  { id: 'farlands', s0: 0, s1: 31.0, fix: 'headGuide', also: ['headRails'], label: 'the Farlands gravel braids', loss: [0.04, 0.01], delay: [6, 2] },
-  { id: 'codeRot', s0: 57.6, s1: 60.4, fix: 'habitatBypass', label: 'the Code Rot pocket at the Springs', side: 1, cr: 'springs', loss: [0.04, 0.01], delay: [10, 3] },
-  { id: 'springs', s0: 52.6, s1: 57.6, fix: 'debrisScreen', label: 'the Springs driftwood', cr: 'springs', loss: [0.05, 0.01], delay: [8, 2] },
-  { id: 'outlet', s0: 61.6, s1: 62.15, fix: 'clearingArm', label: 'the Springs outlet notch', cr: 'springs', loss: [0.06, 0.01], delay: [8, 2] },
-  { id: 'spillway', s0: 62.15, s1: 68.0, fix: 'spillRail', label: 'the narrow spillway', cr: 'springs', loss: [0.04, 0.01], delay: [4, 1] },
-  { id: 'runoffDrop', s0: 95.8, s1: 97.8, fix: 'landingBoards', label: 'the first drop in the runoff chute', cr: 'springs', loss: [0.04, 0.008], delay: [3, 1] },
-  { id: 'runoffDrop2', s0: 120.8, s1: 122.8, fix: 'landingBoards', label: 'the second drop in the runoff chute', cr: 'springs', loss: [0.04, 0.008], delay: [3, 1] },
+  { id: 'root', s0: 549.1, s1: 550.7, fix: 'rootRail', label: 'the exposed root at the trail entrance', loss: [0.002, 0.0004], delay: [1.5, 0.3] },
+  { id: 'gravel', s0: 550.7, s1: 552.9, fix: 'gravelMat', label: 'the rough gravel above the finish', loss: [0.001, 0.0002], delay: [1, 0.2] },
+  { id: 'lip', s0: 449.8, s1: 452.4, fix: 'splashGuard', label: 'the lip of the falls', loss: [0.003, 0.0006], delay: [1, 0.3] },
+  { id: 'pool', s0: 452.4, s1: 456.0, fix: 'poolGuide', also: ['spillSkimmer'], label: 'the plunge pool eddy', loss: [0.003, 0.0006], delay: [4, 1] },
+  { id: 'split', s0: 416.6, s1: 420.0, fix: 'splitGate', label: 'the route split', loss: [0.001, 0.0002], delay: [1.5, 0.5] },
+  { id: 'merge', s0: 466.0, s1: 470.0, fix: 'splitMergeRail', label: 'the waterfall route merge', loss: [0.001, 0.0002], delay: [1.5, 0.5] },
+  { id: 'catch', s0: 326.0, s1: 330.5, fix: 'catchRamp', label: 'the Shelf drop', loss: [0.003, 0.0006], delay: [2, 0.5] },
+  { id: 'deepPool', s0: 96.0, s1: 100.6, fix: 'basinBoom', also: ['basinVane', 'branchSweeper'], label: 'the Clearing’s deep pools', loss: [0.003, 0.0006], delay: [3, 1] },
+  { id: 'farlands', s0: 0, s1: 31.0, fix: 'headGuide', also: ['headRails'], label: 'the Farlands gravel braids', loss: [0.002, 0.0005], delay: [2, 0.7] },
+  { id: 'codeRot', s0: 57.6, s1: 60.4, fix: 'habitatBypass', label: 'the Code Rot pocket at the Springs', side: 1, cr: 'springs', loss: [0.01, 0.002], delay: [4, 1] },
+  { id: 'springs', s0: 52.6, s1: 57.6, fix: 'debrisScreen', label: 'the Springs driftwood', cr: 'springs', loss: [0.01, 0.002], delay: [3, 1] },
+  { id: 'outlet', s0: 61.6, s1: 62.15, fix: 'clearingArm', label: 'the Springs outlet notch', cr: 'springs', loss: [0.04, 0.006], delay: [4, 1] },
+  { id: 'spillway', s0: 62.15, s1: 68.0, fix: 'spillRail', label: 'the narrow spillway', cr: 'springs', loss: [0.005, 0.001], delay: [2, 0.5] },
+  { id: 'runoffDrop', s0: 95.8, s1: 97.8, fix: 'landingBoards', label: 'the first drop in the runoff chute', cr: 'springs', loss: [0.005, 0.001], delay: [1.5, 0.5] },
+  { id: 'runoffDrop2', s0: 120.8, s1: 122.8, fix: 'landingBoards', label: 'the second drop in the runoff chute', cr: 'springs', loss: [0.005, 0.001], delay: [1.5, 0.5] },
 ];
 /** Trouble spot containing a ball (or a stall record) on channel cr (0 main, 1 springs). */
 export function spotAt(s, cr = 0) {
@@ -772,7 +773,7 @@ export class Game {
       const wl = cr.waterLevel(s, c);
       const y = wl > -1e8 ? wl - 0.01 : cr.y0(s);
       const f = cr.flowAt(s, c, y, 0, fr.tx, fr.tz, fl);
-      v[i] = Math.min(2.2, Math.max(0.3, Math.hypot(f.vx, f.vz) * 0.8));
+      v[i] = Math.min(2.6, Math.max(0.35, Math.hypot(f.vx, f.vz) * 0.97));
     }
     cr._streamV = v;
     return v;
