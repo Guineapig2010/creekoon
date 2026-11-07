@@ -16,7 +16,6 @@ function density(creek, s, side) {
   if (s > 96.2 && s < 100) k = side > 0 ? 0 : 0.85; // the Clearing: grasses on the west, the wooded Shelf east
   if (s > 138 && s < 148 && side > 0) k = 1.4; // Flat Rocks: dense willows close behind the ledge (the ground photo)
   if (s < 34) k = 1.25; // the Farlands
-  if (s < -138) k = 1.4;
   return k;
 }
 

@@ -18,7 +18,7 @@ for (const name of which) {
   for (const withFix of [false, true]) {
     let lostSpot = 0, lostAll = 0, launched = 0, mean = 0, max = 0, n = 0;
     for (const seed of [1, 2]) {
-      const base = [...FULL, ...ALL_FIXES.filter((c) => c !== S.fix && !(S.fix === 'willowShield' && c === 'willowFlare'))];
+      const base = [...FULL, ...ALL_FIXES.filter((c) => c !== S.fix)];
       const r = runLine(S.k, secs, withFix ? [...base, S.fix] : base, seed, [S.sec]);
       launched += r.launched;
       for (const [key, v] of Object.entries(r.losses)) { lostAll += v; if (key.startsWith(name + ':')) lostSpot += v; }

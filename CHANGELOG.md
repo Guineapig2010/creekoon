@@ -1,5 +1,86 @@
 # Changelog
 
+## 2.2.0 — Only the creator's places, machines flat out
+
+### Changed
+
+- **Only places on the creator's map are in the game.** Old Rolling Grounds, Alder Bend, the
+  Upper Gorge and the seven invented Farlands reaches (Slate Steps to Cold Spring Headwaters)
+  are gone.
+  - The seven launch sites, each its own factory: **Trail Entrance** $10, **Waterfall** $30,
+    **Crawfish Springs** $65, **Continental Shelf** $120, **Flat Rocks** $170, **the
+    Clearing** $240 and **Farlands Entrance** $400.
+  - The creek now begins a little way into the Farlands, in shallow gravel braids above the
+    entrance.
+- **Upgrades, trouble spots and orders were moved to real places:**
+  - Trail Entrance: Root Rail, Gravel Mat.
+  - The falls: Falls Splash Guard, Plunge Pool Guide, Plunge Pool Skimmer.
+  - The route split and merge: Route Split Gate, Waterfall Merge Rail.
+  - The Shelf: Catch Ramp, Draft Ribbon, Wind Screen, Bank Workshop.
+  - Crawfish Springs: Debris Screen, Spillway Rail, Outlet Sweeper, Runoff Chute Landing
+    Boards, Bank Sampler, Crayfish Habitat Bypass.
+  - The Clearing's deep pools: Float Boom, Flow Vane, Norway-Style Branch Sweeper.
+  - The Farlands: Braid Guide and Braid Rails.
+  - Recipes open at the Springs, Shelf, Flat Rocks, the Clearing and the Farlands.
+  - The orders are Dry Delivery, Norway-Style Soft Landing, Flat Rocks Batch, Clean-Seam
+    Run, Two-Post Service, Deep Pools Batch, Select Shipment and New Creek Nation Farlands
+    Batch.
+- **The Route Split Gate sits at the real split.**
+  - Its boom pivots on the bank between the two waterfall routes.
+  - **Direct** closes the alternate branch.
+  - **Calm** turns balls into the alternate branch: 12 of 12 test balls went down it.
+  - **Balanced** alternates between the two: 5 and 7 test balls.
+- **The deep pools are a real trouble spot.**
+  - Their inflow sets toward the eddy under the east bank.
+  - Stock balls take about 7 s to cross them. With the boom, vane and sweeper they take
+    about 5 s.
+- **Machines fire as fast as they can, all the time.**
+  - Nothing in the creek holds a launch back: there are no reach caps, no backed-up reaches
+    and no yielding to other factories.
+  - Only a very large safety limit (20,000 balls in the creek) remains.
+  - Crowded or unfixed trouble spots cost balls and time instead.
+- **Far balls are streamed.**
+  - Balls near the player, the camera's target or a followed ball get the full physics.
+  - Balls more than about 40 m away ride the surface current on a simplified path, with
+    each trouble spot's loss and hold-up odds (lower with its fix).
+  - They become real balls again within about 30 m.
+  - Headless tests use full physics unless streaming is switched on.
+- **Finish basket.** When the basket and overflow crate are both full, the crew lifts balls
+  out by hand and they count as completed, instead of backing up into the creek.
+- **Water.**
+  - The Crawfish Springs runoff stream is wider and deeper all the way down, and is drawn
+    with fine terrain, so it no longer thins out and vanishes under the ground.
+  - The alternate route at the waterfall runs level with the creek before stepping down, in
+    a shallow valley with low banks. Its water was previously up to 3 m below the soil
+    beside it.
+- **The Bank Workshop yard** is on the grassy west bank between the Clearing and Flat Rocks.
+- **Saves from earlier versions load with the new places.**
+  - Old sites become the nearest real place: Grounds → Trail Entrance, Alder Bend → the
+    Clearing, and the Gorge and headwater reaches → Farlands Entrance. Merged sites combine
+    their queues, upgrades and stats.
+  - Upgrades at removed places are refunded at their price.
+  - A second old site merged into an already-open place is refunded at its old site price.
+  - Unpaid rolling balls return to their factory queue, as before.
+- The flow panel shows balls rolling per reach, without capacity caps.
+
+### Tests actually run
+
+- **Headless playtest (quick mode):** 70 passed, 0 failed (sections B and 1–9).
+  - Section 5: deep pools 7.2 → 5.2 s with the fixes, and the Clearing launched flat out with
+    no release ever held.
+  - Section 6: all seven factories flat out, 1,112 balls in flight at the peak (1,059 of them
+    streamed), exact cash, no factory ever waiting, about 24 ms per simulated second.
+  - Section 8: walks the whole creek from the Trail Entrance to the head of the creek in the
+    Farlands, and climbs to the Springs ponds.
+- **Browser (Chromium, software GL):** first-person views of the Springs runoff stream, the
+  alternate route, the split gate and the deep pools, and the map with every factory running.
+
+### Provisional
+
+- The streamed odds for each trouble spot (`TROUBLE_SPOTS` in `src/core/game.js`) are
+  first-pass tuning. Run times for far balls come out 10–25% above the listed targets with no
+  fixes.
+
 ## 2.1.0 — The creek laid out on the creator's map
 
 ### Changed

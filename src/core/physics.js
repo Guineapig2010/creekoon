@@ -43,9 +43,8 @@ export class PhysicsWorld {
     this.loc2 = {};
     this.balls = [];
     this.t = 0;
-    this.disabled = new Set(['rootRail', 'splashGuard', 'poolGuide', 'catchRamp', 'spillRail', 'alderBypass', 'landingBoards', 'debrisScreen',
-      'willowShield', 'willowFlare', 'slateBumpers', 'leafGrate', 'gateDirect', 'gateCalm', 'splitMergeRail', 'basinBoom', 'spillApron',
-      'sluiceToRight', 'sluiceToLeft', 'headGuide', 'headRails', 'habitatBypass']);
+    this.disabled = new Set(['rootRail', 'splashGuard', 'poolGuide', 'catchRamp', 'spillRail', 'landingBoards', 'debrisScreen',
+      'gateDirect', 'gateCalm', 'splitMergeRail', 'basinBoom', 'headGuide', 'headRails', 'habitatBypass']);
     this.extra = []; // chute colliders + dynamic (logs, arm)
     this.matOn = false;
     this.events = [];
@@ -66,7 +65,7 @@ export class PhysicsWorld {
     const balls = this.balls;
     for (let i = 0; i < balls.length; i++) {
       const b = balls[i];
-      if (b.state !== 'roll') continue;
+      if (b.state !== 'roll' || b.stream) continue;
       const sp = Math.hypot(b.vx, b.vy, b.vz);
       let n = Math.ceil((sp * dt) / (0.4 * BALL_R));
       if (n < 1) n = 1; else if (n > 14) n = 14;
@@ -371,7 +370,7 @@ export class PhysicsWorld {
     const cs = 0.09;
     for (let i = 0; i < balls.length; i++) {
       const b = balls[i];
-      if (b.state !== 'roll') continue;
+      if (b.state !== 'roll' || b.stream) continue;
       const key = Math.floor(b.x / cs) * 73856093 ^ Math.floor(b.z / cs) * 19349663;
       let a = H.get(key);
       if (!a) { a = []; H.set(key, a); }
@@ -380,7 +379,7 @@ export class PhysicsWorld {
     const r2 = 4 * BALL_R * BALL_R;
     for (let i = 0; i < balls.length; i++) {
       const b = balls[i];
-      if (b.state !== 'roll') continue;
+      if (b.state !== 'roll' || b.stream) continue;
       const ix = Math.floor(b.x / cs), iz = Math.floor(b.z / cs);
       for (let ox = -1; ox <= 1; ox++) for (let oz = -1; oz <= 1; oz++) {
         const a = H.get(((ix + ox) * 73856093) ^ ((iz + oz) * 19349663));

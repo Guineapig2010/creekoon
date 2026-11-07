@@ -15,11 +15,11 @@ const fmtK = (n) => (n >= 1e6 ? '$' + (n / 1e6).toFixed(2) + 'M' : n >= 10000 ? 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const INTROS = {
-  shelf: { title: 'Continental Shelf: flow and recipes', items: ['The Flow Monitor (Controls tab) shows balls in flight and delay for every reach, and which reach holds back the line.', 'Dry-Weave is your first optional recipe: pick it per factory in the Sites panel.', 'Field notes for the right-side Shelf and the expedition are in the Archive.', 'Compare the Shelf launch with the Folk Draft in the upper zone: the downdraft pushes airborne balls down.'] },
-  springs: { title: 'Crawfish Springs: controls and orders', items: ['Each factory now has creek-side controls: pause its press or feeder, drain its queue, or stop new releases without touching other sites.', 'Your first optional shipment order is open at the finish station (Orders tab).', 'The crayfish habitat and the strongest Code Rot observations are marked here. The map legend keeps Current, Folk Draft and Code Rot separate.', 'Soft-Core recipe, the Springs Bank Sampler and the Crayfish Habitat Bypass are available.'] },
-  alder: { title: 'Alder Bend: the Bank Workshop', items: ['The optional Bank Workshop (Factory tab) stages surplus balls and carts them to a factory that needs them. It is a separate purchase from new launch sites.', 'Every launch site is already its own permanent factory and needs no workshop.', 'Clean-Seam recipe and the Norway-Style Branch Sweeper are available.'] },
-  gorge: { title: 'Upper Gorge: the headwaters open', items: ['Slate Steps, the first new headwater reach above the Gorge, can be bought from the Sites panel.', 'Industrial upgrades are listed in the Factory, Logistics and Finish tabs.', 'Your balance, machines and rolling balls are all kept.'] },
-  slate: { title: 'Slate Steps', items: ['Rapids Felt recipe, the Slate equipment, the Third Supply Route and the NCN Batch Stamp are available.', 'Keep shorter starts for quick cash, recipe tuning and testing releases.'] },
+  springs: { title: 'Crawfish Springs: controls and orders', items: ['Each factory now has creek-side controls: pause its press or feeder, drain its queue, or stop new releases without touching other sites.', 'Your first optional shipment order is open at the finish station (Orders tab).', 'The Springs is its own little stream up on the Shelf: balls run down the runoff chute and join the creek below the falls.', 'The crayfish habitat and the strongest Code Rot observations are marked here. The map legend keeps Current, Folk Draft and Code Rot separate.', 'Soft-Core recipe, the Springs equipment, the Springs Bank Sampler and the Crayfish Habitat Bypass are available.'] },
+  shelf: { title: 'Continental Shelf: flow, recipes and the Bank Workshop', items: ['The Flow Monitor (Controls tab) shows balls in flight and delay for every reach.', 'Dry-Weave recipe is available: pick it per factory in the Sites panel.', 'The optional Bank Workshop (Factory tab) stages surplus balls and carts them to a factory that needs them. Every launch site is already its own permanent factory.', 'Compare the Shelf launch with the Folk Draft in the upper zone: the downdraft pushes airborne balls down.'] },
+  flatrocks: { title: 'Flat Rocks', items: ['Clean-Seam recipe, the Third Supply Route and the New Creek Nation Batch Stamp are available.', 'The launch sits just below the big sandstone ledge. Its run passes the whole Shelf reach, the falls and the confluence.'] },
+  clearing: { title: 'The Clearing and the deep pools', items: ['Rapids Felt recipe, the Deep Pools Float Boom and Flow Vane and the Norway-Style Branch Sweeper are available.', 'The deep pools hold balls in a slow eddy: they are the first trouble spot on runs from up here.'] },
+  farlands: { title: 'Farlands entrance', items: ['Workshop Select recipe and the Farlands Braid Guide and Rails are available.', 'The creek starts in the gravel braids a little way into the Farlands. This is the longest run on the map.', 'Industrial upgrades are listed in the Factory, Logistics and Finish tabs.'] },
 };
 
 export class UI {
@@ -359,8 +359,8 @@ export class UI {
     } else if (e.type === 'lost') {
       const cam = this.view.camera.position;
       if (g.t - this.lostT > 1.5 && Math.hypot(e.x - cam.x, e.z - cam.z) < 30) { this.lostT = g.t; this.floatLabel(`No finish: ${e.reason}`, e.x, e.y + 0.1, e.z, 'lost'); }
-    } else if (e.type === 'milestone' && e.what === 'gorge') this.toast('Milestone: first full run from the Upper Gorge!', 'big');
-    else if (e.type === 'milestone' && e.what === 'headwaters') this.showMilestone();
+    } else if (e.type === 'milestone' && e.what === 'flatrocks') this.toast('Milestone: first full run from Flat Rocks!', 'big');
+    else if (e.type === 'milestone' && e.what === 'farlands') this.showMilestone();
     else if (e.type === 'intro') this.showIntro(e.what);
     else if (e.type === 'unlock') this.toast(`${STARTS[e.k].name} is open. Its own factory is running — follow its first ball with F.`, 'big');
     else if (e.type === 'orderDone') this.toast(`✓ ${ORDERS.find((o) => o.id === e.id).name} complete: ${e.paid} balls, +${fmt(e.earned)} in bonuses`, 'big');
@@ -377,12 +377,12 @@ export class UI {
 
   openHelp() {
     const seen = Object.keys(INTROS).filter((k) => this.game.milestones[k]);
-    this.openModal(`<h2>Feature help</h2>${seen.length ? seen.map((k) => `<h3>${esc(INTROS[k].title)}</h3><ul class="intro">${INTROS[k].items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`).join('') : '<p>New features are introduced as you open the Shelf, the Springs, Alder Bend and the Upper Gorge.</p>'}
+    this.openModal(`<h2>Feature help</h2>${seen.length ? seen.map((k) => `<h3>${esc(INTROS[k].title)}</h3><ul class="intro">${INTROS[k].items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`).join('') : '<p>New features are introduced as you open Crawfish Springs, the Shelf, Flat Rocks, the Clearing and the Farlands.</p>'}
       <h3>Controls</h3><p>WASD / arrows walk, Shift runs, mouse looks (click the view to capture it). E interacts with factories, map boards, the finish station and for-sale stakes. Space rolls a ball by hand at the factory beside you. M opens the north-up map; F follows a ball; Esc returns you to where you were standing.</p>`);
   }
 
   showMilestone() {
-    this.openModal(`<h2>Cold Spring Headwaters → the finish gate</h2><p>The first ball from the top of the creek just crossed the original gate, after every reach of the network. The stretch where you rolled one ball by hand is now the final leg of a creek full of balls from factories you built.</p><p>Keep refining the same operation: clear bottlenecks, tune recipes and gates, and beat your best sustained cash per minute (${fmtK(this.game.bestCpm)}/min so far).</p><div class="mfoot"><button id="msOk">Keep building</button></div>`);
+    this.openModal(`<h2>The Farlands → the finish gate</h2><p>The first ball from the Farlands just crossed the gate at the trail entrance, after the whole creek. The stretch where you rolled one ball by hand is now the final leg of a creek full of balls from factories you built.</p><p>Keep refining the same operation: clear bottlenecks, tune recipes and gates, and beat your best sustained cash per minute (${fmtK(this.game.bestCpm)}/min so far).</p><div class="mfoot"><button id="msOk">Keep building</button></div>`);
     $('#msOk').addEventListener('click', () => this.closeModal());
   }
 
@@ -413,7 +413,7 @@ export class UI {
       const ncn = g.sites.filter((s) => s.open && (s.ncnMade || s.owned.has('ncnStamp'))).map((s) => `<tr><th>${esc(STARTS[SITE_INDEX[s.id]].name)}</th><td>NCN batch ${s.ncnBatch}: ${s.ncnMade} made, ${s.ncnFinished} finished</td></tr>`).join('');
       body = `<p class="ro">Your simulated production. These records never change the historical archive; a lost factory ball creates no RIP entry.</p>
         <h3>Network</h3><table class="rec"><tr><th>Best sustained cash</th><td>${fmtK(g.bestCpm)}/min (2-minute window)</td></tr><tr><th>Totals</th><td>${g.stats.made} made · ${g.stats.launched} launched · ${g.stats.finished} finished · ${g.stats.lost} lost · ${fmt(g.stats.paid)} paid</td></tr>
-        <tr><th>Milestones</th><td>First Upper Gorge finish: ${g.records.gorgeFirst ? 'yes' : '—'} · First Cold Spring Headwaters finish: ${g.records.headFirst ? 'yes' : '—'}</td></tr>
+        <tr><th>Milestones</th><td>First Flat Rocks finish: ${g.records.gorgeFirst ? 'yes' : '—'} · First Farlands finish: ${g.records.headFirst ? 'yes' : '—'}</td></tr>
         <tr><th>Finishes by recipe</th><td>${RECIPES.map((r, i) => `${r.name} ${g.records.finishesByRecipe[i] || 0}`).join(' · ')}</td></tr></table>
         <h3>By launch site</h3><table class="rec">${rows}</table>
         ${ncn ? `<h3>New Creek Nation batches</h3><table class="rec">${ncn}</table>` : ''}`;
@@ -564,7 +564,7 @@ export class UI {
         const S = g.reachStats[r];
         const ratio = S.count / g.reachCap(r);
         const open = STARTS.some((st, k) => g.sites[k].open && st.s < R.s1);
-        return `<div class="rl ${ratio >= 0.9 ? 'hot' : ratio > 0.6 ? 'warm' : ''} ${open ? '' : 'dim'}" data-reach="${r}"><span>${esc(R.name)}</span><span>${S.count}/${g.reachCap(r)}${delays[r] !== null ? ` · ${delays[r] >= 0 ? '+' : ''}${delays[r].toFixed(1)} s` : ''}</span></div>`;
+        return `<div class="rl ${ratio >= 0.9 ? 'hot' : ratio > 0.6 ? 'warm' : ''} ${open ? '' : 'dim'}" data-reach="${r}"><span>${esc(R.name)}</span><span>${S.count} rolling${delays[r] !== null ? ` · ${delays[r] >= 0 ? '+' : ''}${delays[r].toFixed(1)} s` : ''}</span></div>`;
       }).join('');
     }
     // labels over the world
@@ -774,7 +774,7 @@ export class UI {
       const delays = this.reachDelays();
       let worst = -1, wv = -1;
       g.reachStats.forEach((S, r) => { const v = S.count / g.reachCap(r) + Math.max(0, delays[r] || 0) / 20; if (v > wv) { wv = v; worst = r; } });
-      parts.push(`<h3>Flow Monitor</h3><table class="rec">${REACHES.map((R, r) => { const S = g.reachStats[r]; if (!S.count && delays[r] === null) return ''; return `<tr class="${r === worst && S.count ? 'hl' : ''}"><th>${esc(R.name)}</th><td>${S.count} in flight (cap ${g.reachCap(r)})${delays[r] !== null ? ` · avg delay ${delays[r].toFixed(1)} s` : ''}</td></tr>`; }).join('')}</table>${worst >= 0 && g.reachStats[worst].count ? `<p class="why">Holding back the line: ${esc(REACHES[worst].name)}</p>` : ''}`);
+      parts.push(`<h3>Flow Monitor</h3><table class="rec">${REACHES.map((R, r) => { const S = g.reachStats[r]; if (!S.count && delays[r] === null) return ''; return `<tr class="${r === worst && S.count ? 'hl' : ''}"><th>${esc(R.name)}</th><td>${S.count} in flight${delays[r] !== null ? ` · avg delay ${delays[r].toFixed(1)} s` : ''}</td></tr>`; }).join('')}</table>${worst >= 0 && g.reachStats[worst].count ? `<p class="why">Busiest and slowest reach: ${esc(REACHES[worst].name)}</p>` : ''}`);
     } else parts.push(`<p class="hint">Buy the Flow Monitor (Controls) to see delay and congestion by reach.</p>`);
     if (g.owned.has('pressureAlerts')) { const a = g.pressureAlert(); parts.push(`<h3>Pressure Alerts</h3><p>${a ? `⚠ ${esc(a.text)} <button data-goalert="${a.s}" class="ghost">Show on map</button>` : 'No queue is slowing the line.'}</p>`); }
     if (g.owned.has('splitTimers')) {
@@ -796,7 +796,7 @@ export class UI {
       }
       if (g.owned.has('prioritySwitch')) parts.push(`<div class="qrow">Priority Switch: reserve <select data-prshare>${[0.25, 0.4, 0.5, 0.6, 0.75].map((x) => `<option value="${x}" ${g.workshop.priority.share === x ? 'selected' : ''}>${Math.round(x * 100)}%</option>`).join('')}</select> of shipments for <select data-prsite><option value="">nobody</option>${open.map((k) => `<option value="${k}" ${g.workshop.priority.site === k ? 'selected' : ''}>${esc(STARTS[k].name)}</option>`).join('')}</select></div>`);
     }
-    if (g.owned.has('splitGate')) parts.push(`<h3>Splitstone Gate</h3><div class="qrow">${['direct', 'calm', 'balanced'].map((m) => `<button data-gate="${m}" class="${g.splitGate === m ? '' : 'ghost'}">${m[0].toUpperCase() + m.slice(1)}</button>`).join(' ')}</div>`);
+    if (g.owned.has('splitGate')) parts.push(`<h3>Route Split Gate</h3><div class="qrow">${['direct', 'calm', 'balanced'].map((m) => `<button data-gate="${m}" class="${g.splitGate === m ? '' : 'ghost'}">${m[0].toUpperCase() + m.slice(1)}</button>`).join(' ')}</div>`);
     if (g.owned.has('routePresets')) {
       parts.push(`<h3>Route Presets</h3>${g.presets.map((p, i) => `<div class="qrow">Preset ${i + 1}: ${p ? 'saved' : 'empty'} <button data-psave="${i}" class="ghost">Save current</button> ${p ? `<button data-pprev="${i}" class="ghost">Preview</button> <button data-pload="${i}">Restore</button>` : ''}</div>`).join('')}<div id="presetPrev"></div>`);
     }

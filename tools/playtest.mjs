@@ -8,7 +8,7 @@
 import './headless-dom.mjs';
 import fs from 'fs';
 import { Creek } from '../src/core/creek.js';
-import { Game } from '../src/core/game.js';
+import { Game, REMOVED_UPGRADES } from '../src/core/game.js';
 import {
   STARTS, SITE_INDEX, S_FINISH, PHYS_DT, UPGRADES, UPGRADE_BY_ID, RECIPE_INDEX, ORDERS, REACHES, isSiteUpgrade, checkpointsFor,
 } from '../src/core/config.js';
@@ -43,7 +43,7 @@ function run(g, secs, onEvent, each) {
 const openTo = (g, k) => { for (let j = 0; j <= k; j++) g.sites[j].open = true; g.installChutes(); g.applyOwned(); };
 /** Install upgrades at site k (site-scoped) or globally, without spending. */
 const give = (g, k, ids) => { for (const id of ids) { if (isSiteUpgrade(id)) g.sites[k].owned.add(id); else g.owned.add(id); } g.applyOwned(); g.installChutes(); };
-const CREEK_FIXES = ['rootRail', 'gravelMat', 'splashGuard', 'poolGuide', 'catchRamp', 'debrisScreen', 'spillRail', 'alderBypass', 'landingBoards', 'clearingArm', 'slateBumpers', 'slateOutlet', 'leafGrate'];
+const CREEK_FIXES = ['rootRail', 'gravelMat', 'splashGuard', 'poolGuide', 'catchRamp', 'debrisScreen', 'spillRail', 'landingBoards', 'clearingArm'];
 const FAST = ['press', 'feeder', 'quickMold', 'lowFriction', 'twinPress', 'indexed', 'hopperExt', 'spacingSensor'];
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const fixture = (n) => JSON.parse(fs.readFileSync(new URL(`./fixtures/${n}.json`, import.meta.url), 'utf8'));
@@ -116,7 +116,8 @@ if (want('B')) {
 // ================================================================= 1. migration
 if (want(1)) {
   head('1. Old-save migration (genuine v1 saves: early, mid-game, finished)');
-  const OLD = ['grounds', 'waterfall', 'shelf', 'springs', 'alder', 'gorge'];
+  // v1 site ids and the real places they launch from now
+  const OLD = ['grounds', 'waterfall', 'shelf', 'springs', 'alder', 'gorge'].map((id) => ({ grounds: 'trail', alder: 'clearing', gorge: 'farlands' }[id] || id));
   for (const name of ['early', 'mid', 'finished']) {
     const d = fixture(name);
     const before = clone(d);
@@ -134,20 +135,22 @@ if (want(1)) {
     g.sites.forEach((s2) => { for (const it of s2.hopper) queued.set(it.id, s2.id); });
     const backOk = oldRolling.every((o) => queued.get(o.id) === OLD[o.k]);
     const queueTotal = g.sites.reduce((a, s2) => a + s2.hopper.length + s2.post.length, 0);
-    ok(g.cash === d.cash && JSON.stringify(openIds.sort()) === JSON.stringify(wantOpen.slice().sort())
-      && d.owned.every((id) => allOwned.has(id)) && queueTotal === (d.hopper || []).length + oldRolling.length && backOk
+    // upgrades at places that are not on the creator's map are refunded
+    const refund = d.owned.reduce((x, id) => x + (REMOVED_UPGRADES[id] || 0), 0);
+    ok(g.cash === d.cash + refund && JSON.stringify(openIds.sort()) === JSON.stringify(wantOpen.slice().sort())
+      && d.owned.every((id) => allOwned.has(id) || REMOVED_UPGRADES[id]) && queueTotal === (d.hopper || []).length + oldRolling.length && backOk
       && g.phys.balls.length === 0 && g.stats.paid === d.stats.paid,
-      `${name.padEnd(8)} cash $${d.cash} kept · open ${openIds.join('/')} · ${d.owned.length} machines kept (line at ${selId}) · old queue ${(d.hopper || []).length} kept · ${oldRolling.length} unpaid rolling balls returned to their own factory queues (IDs kept) · paid finishes $${d.stats.paid}`);
+      `${name.padEnd(8)} cash $${d.cash} kept${refund ? ` (+$${refund} refunded for ${d.owned.filter((id) => REMOVED_UPGRADES[id]).join(', ')})` : ''} · open ${openIds.join('/')} · ${d.owned.length} machines kept (line at ${selId}) · old queue ${(d.hopper || []).length} kept · ${oldRolling.length} unpaid rolling balls returned to their own factory queues (IDs kept) · paid finishes $${d.stats.paid}`);
     // other previously open sites get a basic line when the old line had one
     const basic = wantOpen.filter((id) => id !== selId).every((id) => !d.owned.includes('press') || g.sites[K[id]].owned.has('press'));
     ok(basic, `${name.padEnd(8)} previously unlocked sites keep a basic line (press/feeder installed where the old line had them)`);
     // milestone-gated controls
-    const sp = g.isOpen('springs'), al = g.isOpen('alder');
+    const sp = g.isOpen('springs'), al = g.isOpen('shelf');
     const ordersOk = ORDERS.find((o) => o.id === 'dry') && g.orderOpen(ORDERS.find((o) => o.id === 'dry')) === sp;
-    const wsOk = (g.canBuy('bankWorkshop').why !== `Requires ${STARTS[K.alder].name}`) === al;
+    const wsOk = (g.canBuy('bankWorkshop').why !== `Requires ${STARTS[K.shelf].name}`) === al;
     const flowOk = (g.canBuy('flowMonitor').why !== `Requires ${STARTS[K.shelf].name}`) === g.isOpen('shelf');
-    ok(ordersOk && wsOk && flowOk && g.unlockable(K.flatrocks) === g.isOpen('shelf') && (name !== 'finished' || g.unlockable(K.slate)),
-      `${name.padEnd(8)} new controls appear at the right milestones (orders ${sp ? 'open' : 'locked'}, Bank Workshop ${al ? 'available' : 'locked'}, Flow Monitor ${g.isOpen('shelf') ? 'available' : 'locked'}${name === 'finished' ? ', Slate Steps for sale' : ''})`);
+    ok(ordersOk && wsOk && flowOk && g.unlockable(K.flatrocks) === g.isOpen('shelf') && (name !== 'finished' || g.isOpen('farlands')),
+      `${name.padEnd(8)} new controls appear at the right milestones (orders ${sp ? 'open' : 'locked'}, Bank Workshop ${al ? 'available' : 'locked'}, Flow Monitor ${g.isOpen('shelf') ? 'available' : 'locked'}${name === 'finished' ? ', the Farlands open' : ''})`);
     // the migrated save keeps working: every old ball pays at most once, books balance after a run
     const paid = new Set(g.phys.balls.filter((b) => b.paid).map((b) => b.id));
     const seen = new Set();
@@ -162,9 +165,8 @@ if (want(1)) {
 // ================================================================= 2. geography
 if (want(2)) {
   head('2. Connected geography: every new launch reaches the original finish and pays once');
-  const NEW = ['springs', 'flatrocks', 'slate', 'willow', 'splitstone', 'longeddy', 'spillway', 'sluice', 'coldspring'];
-  const lanes = { alt: 0, main: 0, splitDirect: 0, splitCalm: 0, sluiceL: 0, sluiceR: 0 };
-  const isl = creek.islands.find((i) => i.name === 'Splitstone'), rib = creek.islands.find((i) => i.name === 'Sluice rib');
+  const NEW = ['waterfall', 'springs', 'shelf', 'flatrocks', 'clearing', 'farlands'];
+  const lanes = { alt: 0, main: 0 };
   for (const id of NEW) {
     const k = K[id];
     const g = fresh();
@@ -187,8 +189,6 @@ if (want(2)) {
         const L = laneOf.get(b.id) || {};
         if (!b.cr && creek.channelOf(b.s, b.d, 0) === 'alt') L.alt = true;
         if (b.cr) L.stream = true;
-        if (b.s > isl.s0 + 1 && b.s < isl.s1 - 1) L.split = b.d < creek.c(b.s) + isl.dOff ? 'L' : 'R';
-        if (b.s > rib.s0 + 1 && b.s < rib.s1 - 1) L.sluice = b.d < creek.c(b.s) + rib.dOff ? 'L' : 'R';
         laneOf.set(b.id, L);
         if (b.cpT) cps.set(b.id, b.cpT.map(([s]) => s));
       }
@@ -200,8 +200,6 @@ if (want(2)) {
     for (const x of finished) {
       const L = laneOf.get(x) || {};
       if (!STARTS[k].cr && STARTS[k].s < creek.alt.s0) { if (L.alt) lanes.alt++; else lanes.main++; }
-      if (L.split === 'L') lanes.splitDirect++; else if (L.split === 'R') lanes.splitCalm++;
-      if (L.sluice === 'L') lanes.sluiceL++; else if (L.sluice === 'R') lanes.sluiceR++;
     }
     const viaStream = !STARTS[k].cr || finished.every((x) => (laneOf.get(x) || {}).stream);
     ok(finished.length >= n - 1 && once && allCps && viaStream && g.cash - cashBefore === sumPaid && sumPaid === finished.length * STARTS[k].base,
@@ -209,31 +207,31 @@ if (want(2)) {
   }
   ok(lanes.alt > 0 && lanes.main > 0, `waterfall split: both branches used and both pay (${lanes.main} over the falls on creek-right, ${lanes.alt} down the alternate route)`);
   {
+    // the Route Split Gate on Balanced alternates the two waterfall branches
     const g2 = fresh();
-    openTo(g2, K.splitstone);
+    openTo(g2, K.waterfall);
     give(g2, 0, ['splitGate']);
     g2.splitGate = 'balanced';
     const lane = new Map(), paid = new Map(), merged = new Set();
     let n = 0;
-    run(g2, 200, (e) => { if (e.type === 'finish') paid.set(e.id, (paid.get(e.id) || 0) + 1); }, (gg, i) => {
-      if (n < 8 && gg.sites[K.splitstone].manualCD <= 0 && gg.t > n * 4) { gg.manualRoll(K.splitstone); n++; }
+    run(g2, 210, (e) => { if (e.type === 'finish') paid.set(e.id, (paid.get(e.id) || 0) + 1); }, (gg, i) => {
+      if (n < 10 && gg.sites[K.waterfall].manualCD <= 0 && gg.t > n * 3) { gg.manualRoll(K.waterfall); n++; }
       if (i % 6) return;
       for (const b of gg.phys.balls) {
-        if (b.state === 'roll' && b.s > isl.s0 + 1 && b.s < isl.s1 - 1) lane.set(b.id, b.d < creek.c(b.s) + isl.dOff ? 'L' : 'R');
-        if (b.state === 'roll' && lane.has(b.id) && b.s > -38) merged.add(b.id);
+        if (b.state !== 'roll' || b.cr) continue;
+        if (b.s > creek.alt.s0 + 6 && b.s < creek.alt.s1 - 6) { const ch = creek.channelOf(b.s, b.d, 0); if (ch) lane.set(b.id, ch === 'alt' ? 'alt' : 'main'); }
+        if (lane.has(b.id) && b.s > creek.alt.s1 + 1.5) merged.add(b.id);
       }
     });
-    const L = [...lane.values()].filter((x) => x === 'L').length, R = [...lane.values()].filter((x) => x === 'R').length;
-    const allPassed = [...lane.keys()].filter((id) => merged.has(id)).length;
+    const A = [...lane.values()].filter((x) => x === 'alt').length, Mn = [...lane.values()].filter((x) => x === 'main').length;
     const twice = [...paid.values()].some((v) => v > 1);
-    ok(L > 0 && R > 0 && allPassed >= lane.size - 1 && !twice, `Splitstone Fork: with the gate on Balanced both lanes carry balls (${L} east / ${R} west; the stock fork sends ${lanes.splitDirect} / ${lanes.splitCalm}); ${allPassed}/${lane.size} came back together past the merge; none paid twice`);
+    ok(A > 0 && Mn > 0 && merged.size >= lane.size - 1 && !twice, `Route Split Gate on Balanced: both waterfall branches carry balls (${Mn} over the falls / ${A} down the alternate route; the stock split sent ${lanes.main} / ${lanes.alt}); ${merged.size}/${lane.size} came back together past the merge; none paid twice`);
   }
-  ok(lanes.sluiceL + lanes.sluiceR > 0, `Boulder Sluice rib passed on both sides over the run (${lanes.sluiceL} left / ${lanes.sluiceR} right)`);
   // a reach marker / checkpoint pays nothing by itself
   const g = fresh();
-  openTo(g, K.alder);
+  openTo(g, K.clearing);
   let cpCash = 0;
-  run(g, 80, (e, g2) => { if (e.type === 'checkpoint') cpCash += 0; }, (g2) => { if (g2.t < 1) g2.manualRoll(K.alder); });
+  run(g, 80, (e, g2) => { if (e.type === 'checkpoint') cpCash += 0; }, (g2) => { if (g2.t < 1) g2.manualRoll(K.clearing); });
   const b = g.phys.balls.find((x) => x.state === 'roll');
   ok(g.cash === 0 && b && b.cpi > 0, `a ball passing ${b?.cpi} checkpoints and reach markers earns nothing until the finish gate (cash still $${g.cash})`);
 }
@@ -258,19 +256,19 @@ if (want(3)) {
   // transfers: Bank Workshop moving surplus between sites
   const w = fresh();
   w.cash = 1e7;
-  for (let k = 1; k <= K.alder; k++) w.unlock(k);
-  give(w, K.alder, ['press', 'feeder', 'quickMold', 'twinPress', 'hopperExt']);
+  for (let k = 1; k <= K.clearing; k++) w.unlock(k);
+  give(w, K.clearing, ['press', 'feeder', 'quickMold', 'twinPress', 'hopperExt']);
   give(w, K.springs, ['press', 'feeder', 'lowFriction', 'indexed']);
-  w.sites[K.alder].enabled.release = false; // Alder only manufactures: everything goes by cart
+  w.sites[K.clearing].enabled.release = false; // the Clearing only manufactures: everything goes by cart
   give(w, K.flatrocks, ['press', 'feeder', 'lowFriction', 'indexed']);
   w.buy('bankWorkshop'); w.setRoute(0, K.flatrocks);
   run(w, QUICK ? 150 : 240);
   const errs = reconcile(w);
-  const a = w.sites[K.alder].stats, sp = w.sites[K.flatrocks].stats;
+  const a = w.sites[K.clearing].stats, sp = w.sites[K.flatrocks].stats;
   ok(errs.length === 0 && a.transferredOut > 0 && sp.transferredIn > 0 && stageAudit(w).dup.length === 0,
-    `manufacture, transfers, launches, losses and finishes reconcile per site and network-wide (Alder made ${a.made}, carted out ${a.transferredOut}; Flat Rocks received ${sp.transferredIn}, launched ${sp.launched}; ${w.stats.finished} finished, ${w.stats.lost} lost)${errs.length ? ' — ' + errs.join('; ') : ''}`);
-  const transferred = w.phys.balls.concat([]).filter((b) => b.site === K.alder && b.start === K.flatrocks);
-  ok(transferred.every((b) => b.recipe === 0) && w.recentLaunchesKeepOrigin !== false, `transferred balls keep their origin site and recipe (${transferred.length} in flight from Alder, launched at Flat Rocks)`);
+    `manufacture, transfers, launches, losses and finishes reconcile per site and network-wide (the Clearing made ${a.made}, carted out ${a.transferredOut}; Flat Rocks received ${sp.transferredIn}, launched ${sp.launched}; ${w.stats.finished} finished, ${w.stats.lost} lost)${errs.length ? ' — ' + errs.join('; ') : ''}`);
+  const transferred = w.phys.balls.concat([]).filter((b) => b.site === K.clearing && b.start === K.flatrocks);
+  ok(transferred.every((b) => b.recipe === 0) && w.recentLaunchesKeepOrigin !== false, `transferred balls keep their origin site and recipe (${transferred.length} in flight from the Clearing, launched at Flat Rocks)`);
   // pause and drain one full site while the others continue
   const d = fresh();
   d.cash = 1e6;
@@ -285,7 +283,7 @@ if (want(3)) {
   run(d, 120);
   if (d.sites[K.waterfall].hopper.length) console.log('    (drain status:', d.sites[K.waterfall].feederStatus, d.sites[K.waterfall].hopper.length, d.sites[K.waterfall].stats.launched, ')');
   ok(full >= 8 && d.sites[K.waterfall].hopper.length === 0 && d.sites[K.waterfall].stats.made === m1 && d.sites[0].stats.made > o0 && d.sites[K.springs].stats.made > f0,
-    `Waterfall Run drained its full ${full}-ball queue with its press paused while Old Rolling Grounds (+${d.sites[0].stats.made - o0}) and Crawfish Springs (+${d.sites[K.springs].stats.made - f0}) kept producing`);
+    `Waterfall Run drained its full ${full}-ball queue with its press paused while the Trail Entrance (+${d.sites[0].stats.made - o0}) and Crawfish Springs (+${d.sites[K.springs].stats.made - f0}) kept producing`);
   d.sites[K.waterfall].enabled.press = true; d.sites[K.waterfall].enabled.release = false;
   const l1 = d.sites[K.waterfall].stats.launched, l0 = d.sites[0].stats.launched;
   run(d, 30);
@@ -297,94 +295,89 @@ if (want(3)) {
 if (want(4)) {
   head('4. Payout math, order reservations, reload in transit, same-step cap');
   const g = fresh();
-  openTo(g, K.slate);
+  openTo(g, K.flatrocks);
   give(g, 0, CREEK_FIXES); // creek fixes change the route, never the payout
-  g.sites[K.slate].owned.add('premiumFelt');
-  g.sites[K.slate].recipe = RECIPE_INDEX.dryweave;
-  const pay = g.payoutFor(K.slate);
-  ok(pay === 650, `Slate Steps + Dry-Weave + Premium Felt (+$5): $620 + $5 + $25 = $${pay}`);
-  g.acceptOrder('slatebatch');
-  g.manualRoll(K.slate);
-  const b = g.phys.balls.find((x) => x.start === K.slate);
-  ok(b.payout === 755 && g.order.reserved === 1, `with one Slate Test Batch slot it pays $${b.payout} (reserved ${g.order.reserved})`);
+  g.sites[K.flatrocks].owned.add('premiumFelt');
+  g.sites[K.flatrocks].recipe = RECIPE_INDEX.dryweave;
+  const pay = g.payoutFor(K.flatrocks);
+  ok(pay === 182, `Flat Rocks + Dry-Weave + Premium Felt (+$5): $170 + $5 + $7 = $${pay}`);
+  g.acceptOrder('flatbatch');
+  g.manualRoll(K.flatrocks);
+  const b = g.phys.balls.find((x) => x.start === K.flatrocks);
+  ok(b.payout === 242 && g.order.reserved === 1, `with one Flat Rocks Batch slot it pays $${b.payout} (reserved ${g.order.reserved})`);
   run(g, 30);
   const snap = clone(g.serialize());
   const r = new Game(creek, snap, { headless: true });
   const cash0 = r.cash;
   let paidR = [], paidO = [];
   let lostR = [];
-  run(r, STARTS[K.slate].eta * 2.5, (e) => { if (e.type === 'finish') paidR.push([e.id, e.amount]); if (e.type === 'lost') lostR.push(e.reason + '@' + e.spot); });
+  run(r, STARTS[K.flatrocks].eta * 2.5, (e) => { if (e.type === 'finish') paidR.push([e.id, e.amount]); if (e.type === 'lost') lostR.push(e.reason + '@' + e.spot); });
   if (!paidR.length) console.log('    (reloaded ball lost:', lostR.join(', '), ')');
-  run(g, STARTS[K.slate].eta * 2.5, (e) => { if (e.type === 'finish') paidO.push([e.id, e.amount]); });
-  ok(paidR.length === 1 && paidR[0][1] === 755 && r.cash - cash0 === 755 && r.order.paid === 1 && r.order.reserved === 0 && paidO.length === 1 && paidO[0][1] === 755,
+  run(g, STARTS[K.flatrocks].eta * 2.5, (e) => { if (e.type === 'finish') paidO.push([e.id, e.amount]); });
+  ok(paidR.length === 1 && paidR[0][1] === 242 && r.cash - cash0 === 242 && r.order.paid === 1 && r.order.reserved === 0 && paidO.length === 1 && paidO[0][1] === 242,
     `reloaded mid-run: the ball finishes once for $${paidR[0]?.[1]} and the order shows 1 paid / 0 reserved (the original run agrees: $${paidO[0]?.[1]})`);
   // same-step cap: one slot left, two launches in the same step
   const c = fresh();
-  openTo(c, K.slate);
-  c.acceptOrder('slatebatch');
+  openTo(c, K.flatrocks);
+  c.acceptOrder('flatbatch');
   c.order.paid = c.order.target - 1;
-  c.launch(K.slate, c.makeItem(K.slate)); c.launch(K.slate, c.makeItem(K.slate));
-  const bs = c.phys.balls.filter((x) => x.start === K.slate);
+  c.launch(K.flatrocks, c.makeItem(K.flatrocks)); c.launch(K.flatrocks, c.makeItem(K.flatrocks));
+  const bs = c.phys.balls.filter((x) => x.start === K.flatrocks);
   ok(bs.filter((x) => x.orderId).length === 1 && c.order.reserved === 1, `two launches in the same step with one slot left: exactly one reserves the bonus (${bs.map((x) => '$' + x.payout).join(', ')})`);
   // two reserved balls arriving in the same simulation step
   const e = fresh();
-  openTo(e, K.slate);
-  e.acceptOrder('slatebatch');
+  openTo(e, K.flatrocks);
+  e.acceptOrder('flatbatch');
   e.order.paid = e.order.target - 2;
-  e.launch(K.slate, e.makeItem(K.slate)); e.launch(K.slate, e.makeItem(K.slate));
-  const [b1, b2] = e.phys.balls.filter((x) => x.start === K.slate);
+  e.launch(K.flatrocks, e.makeItem(K.flatrocks)); e.launch(K.flatrocks, e.makeItem(K.flatrocks));
+  const [b1, b2] = e.phys.balls.filter((x) => x.start === K.flatrocks);
   const before = e.cash;
   e.pay(b1); e.pay(b2);
-  const log = e.orderLog.filter((o) => o.id === 'slatebatch');
-  ok(!e.order && log.length === 1 && log[0].paid === log[0].target && e.cash - before === 2 * (620 + 105) && e.events.filter((x) => x.type === 'orderDone').length === 1,
+  const log = e.orderLog.filter((o) => o.id === 'flatbatch');
+  ok(!e.order && log.length === 1 && log[0].paid === log[0].target && e.cash - before === 2 * (170 + 60) && e.events.filter((x) => x.type === 'orderDone').length === 1,
     `two reserved balls settling in the same step: order completes once at ${log[0]?.paid}/${log[0]?.target}, cash +$${e.cash - before}`);
   // a lost ball frees its slot and never touches the archive
   const arch = JSON.stringify([RACE_RECORDS, FEATURED, UNNUMBERED, ARCHIVE_CARDS, FIELD_NOTES]);
   const f = fresh();
-  openTo(f, K.slate);
-  f.acceptOrder('slatebatch');
-  f.manualRoll(K.slate);
-  const fb = f.phys.balls.find((x) => x.start === K.slate);
+  openTo(f, K.flatrocks);
+  f.acceptOrder('flatbatch');
+  f.manualRoll(K.flatrocks);
+  const fb = f.phys.balls.find((x) => x.start === K.flatrocks);
   f.lose(fb, 'test', f.phys.balls.indexOf(fb));
   ok(f.order.reserved === 0 && arch === JSON.stringify([RACE_RECORDS, FEATURED, UNNUMBERED, ARCHIVE_CARDS, FIELD_NOTES]), 'a lost reserved ball frees its order slot; the historical archive is unchanged');
 }
 
 // ================================================================= 5. upgrade impact
 if (want(5)) {
-  head('5. Upgrade impact: Willow Narrows backup and exit fix; a fast press waiting on its post');
+  head('5. Upgrade impact: the Clearing’s deep pools; machines never wait on the creek; a fast press waiting on its post');
   const secs = QUICK ? 200 : 300;
-  // three factories above the Narrows (Willow, Splitstone, Long Eddy) all feed the root pinch
-  const feeders = [K.willow, K.splitstone, K.longeddy];
-  const willowRun = (extra) => {
+  const poolRun = (extra) => {
     const g = fresh();
     g.launchSeed = 1;
-    openTo(g, K.longeddy);
-    for (const k of feeders) give(g, k, [...FAST, 'servo']);
-    // the rest of the network is already improved, so the Narrows is the constraint
-    give(g, 0, ['wideBasket', 'conveyor', 'poweredBelt', 'twinPacking', 'splitTray', 'industrialCatch', 'overflowCrate', 'rootRail', 'gravelMat', 'splashGuard', 'poolGuide', 'catchRamp', 'debrisScreen', 'spillRail', 'alderBypass', 'landingBoards', 'clearingArm', 'slateBumpers', 'slateOutlet', 'leafGrate']);
-    give(g, K.willow, extra);
-    let dwell = 0, n = 0, maxCount = 0, backed = 0, ticks = 0, passed = 0;
+    openTo(g, K.clearing);
+    give(g, K.clearing, [...FAST, 'servo']);
+    give(g, 0, extra);
+    let dwell = 0, n = 0;
     const enter = new Map();
-    const t0 = 150;
+    const t0 = 20;
+    const held = new Set();
     run(g, secs, null, (g2, i) => {
       if (i % 12) return;
-      if (g2.t >= t0) ticks++;
-      if (g2.t >= t0 && feeders.some((k) => /Willow Narrows backed up/.test(g2.sites[k].feederStatus))) backed++;
-      maxCount = Math.max(maxCount, g2.reachStats[reachIdx('willow')].count);
+      for (const st of g2.sites) if (st.open && st.feederStatus && /backed up|full|wait/i.test(st.feederStatus)) held.add(st.feederStatus);
       for (const b of g2.phys.balls) {
-        if (b.state !== 'roll') continue;
-        if (b.s >= -27 && b.s < -19 && !enter.has(b.id)) enter.set(b.id, g2.t);
-        if (b.s >= -19 && enter.has(b.id) && enter.get(b.id) > 0) { if (g2.t >= t0) { dwell += g2.t - enter.get(b.id); n++; passed++; } enter.set(b.id, -1); }
+        if (b.state !== 'roll' || b.cr || b.start !== K.clearing) continue;
+        if (b.s >= 96.0 && b.s < 100.6 && !enter.has(b.id)) enter.set(b.id, g2.t);
+        if (b.s >= 100.6 && enter.has(b.id) && enter.get(b.id) > 0) { if (g2.t >= t0) { dwell += g2.t - enter.get(b.id); n++; } enter.set(b.id, -1); }
       }
     });
-    const lost = feeders.reduce((x, k) => x + g.sites[k].stats.lost, 0), launched = feeders.reduce((x, k) => x + g.sites[k].stats.launched, 0);
-    return { fpm: (passed / (secs - t0)) * 60, dwell: n ? dwell / n : 0, maxCount, backedPct: (backed / Math.max(1, ticks)) * 100, lostPct: (lost / Math.max(1, launched)) * 100 };
+    const st = g.sites[K.clearing].stats;
+    const lostPool = g.lossBySpot.deepPool || 0;
+    return { dwell: n ? dwell / n : 0, n, lostPct: (lostPool / Math.max(1, st.launched)) * 100, launched: st.launched, held: [...held] };
   };
-  const reachIdx = (id) => REACHES.findIndex((R) => R.id === id);
-  const a = willowRun([]), b = willowRun(['willowShield', 'willowFlare']);
-  ok(a.dwell > 6 && (a.backedPct > 5 || a.maxCount >= 15),
-    `stock Willow Narrows backs up under three upstream factories: ${a.dwell.toFixed(1)} s average through the root pinch, up to ${a.maxCount} balls in the reach (stock safe capacity ${REACHES[reachIdx('willow')].capStock}; ${REACHES[reachIdx('willow')].cap} with the Exit Flare), releases held ${a.backedPct.toFixed(0)}% of the time, ${a.lostPct.toFixed(1)}% lost`);
-  ok(b.fpm > a.fpm * 1.08 && b.dwell < a.dwell, `Root Shield + Exit Flare: ${a.fpm.toFixed(1)} → ${b.fpm.toFixed(1)} balls/min through the pinch, pinch ${a.dwell.toFixed(1)} → ${b.dwell.toFixed(1)} s, held ${a.backedPct.toFixed(0)}% → ${b.backedPct.toFixed(0)}%, lost ${a.lostPct.toFixed(1)}% → ${b.lostPct.toFixed(1)}%`);
+  const a = poolRun([]), b = poolRun(['basinBoom', 'basinVane', 'branchSweeper']);
+  ok(a.dwell > 2 && a.n > 20, `stock deep pools hold balls in their eddy: ${a.dwell.toFixed(1)} s average through the pools over ${a.n} balls, ${a.lostPct.toFixed(1)}% lost there`);
+  ok(b.dwell < a.dwell * 0.85 && b.lostPct <= a.lostPct, `Float Boom + Flow Vane + Branch Sweeper: ${a.dwell.toFixed(1)} → ${b.dwell.toFixed(1)} s through the pools, lost there ${a.lostPct.toFixed(1)}% → ${b.lostPct.toFixed(1)}%`);
+  ok(a.held.length === 0 && b.held.length === 0 && a.launched > 100, `the Clearing’s machines ran flat out: ${a.launched} launches in ${secs} s and no release was ever held for balls in the creek${a.held.length ? ' — held: ' + a.held.join(', ') : ''}`);
   // fast press, slow launch: the press waits on a full post, then the launch fix pays off
   const pressRun = (extra) => {
     const g = fresh();
@@ -400,13 +393,17 @@ if (want(5)) {
 
 // ================================================================= 6. performance and stress
 if (want(6)) {
-  head('6. Many factories, the longest route, ~500 balls in flight');
+  head('6. Every factory flat out: the longest route, over a thousand balls in flight (far balls streamed)');
   const g = fresh();
   g.cash = 0;
   openTo(g, STARTS.length - 1);
   for (let k = 0; k < STARTS.length; k++) give(g, k, [...FAST, 'servo', 'turbo', 'bulkHopper', 'indexed']);
   give(g, 0, ['wideBasket', 'conveyor', 'poweredBelt', 'twinPacking', 'splitTray', 'industrialCatch', 'overflowCrate', 'autoGap', ...CREEK_FIXES,
-    'willowShield', 'willowFlare', 'splitGate', 'splitMergeRail', 'basinBoom', 'basinVane', 'spillApron', 'spillSkimmer', 'sluiceAlternator', 'sluiceMerge', 'headGuide', 'headRails']);
+    'splitGate', 'splitMergeRail', 'basinBoom', 'basinVane', 'spillSkimmer', 'headGuide', 'headRails']);
+  // as in the browser: full physics near the player (standing at the finish), streamed elsewhere
+  const fin = creek.worldXZ(552, creek.c(552));
+  g.streamOn = true; g.focus = [{ x: fin.x, z: fin.z }];
+  let maxStream = 0, maxPhys = 0;
   let maxBalls = 0, paidSum = 0, ms = 0, simT = 0;
   const launchesBySite = new Array(STARTS.length).fill(0);
   const blockedReason = new Set();
@@ -421,20 +418,23 @@ if (want(6)) {
     if (i % 60) return;
     const n = g2.ballsRolling();
     maxBalls = Math.max(maxBalls, n);
-    for (const s of g2.sites) if (s.open && s.reason) blockedReason.add(s.reason.replace(/^.* (backed up)$/, 'reach $1'));
+    maxStream = Math.max(maxStream, g2.streamCount || 0);
+    maxPhys = Math.max(maxPhys, g2.phys.balls.filter((b) => b.state === 'roll' && !b.stream).length);
+    for (const s of g2.sites) if (s.open && s.feederStatus && s.feederStatus !== 'Hopper empty') blockedReason.add(s.feederStatus);
   });
   ms = Date.now() - tStart; simT = secs;
   const starved = launchesBySite.map((n, k) => [STARTS[k].id, n]).filter(([, n]) => n < 5);
-  ok(maxBalls >= 420, `${maxBalls} balls in flight at the peak (ball budget ${g.ballBudget}), ${g.stats.finished} finishes, ${g.stats.lost} lost`);
-  ok(starved.length === 0, `balanced release at the shared reaches: every one of the 14 factories launched (min ${Math.min(...launchesBySite)}, max ${Math.max(...launchesBySite)})${starved.length ? ' — starved: ' + starved.map((x) => x[0]).join(', ') : ''}`);
+  ok(maxBalls >= 1000, `${maxBalls} balls in flight at the peak (${maxStream} streamed far from the player, up to ${maxPhys} fully simulated near the finish), ${g.stats.finished} finishes, ${g.stats.lost} lost, ${g.stats.handCollected || 0} lifted out by hand when the basket was full`);
+  ok(starved.length === 0, `every one of the ${STARTS.length} factories launched at full rate (min ${Math.min(...launchesBySite)}, max ${Math.max(...launchesBySite)})${starved.length ? ' — starved: ' + starved.map((x) => x[0]).join(', ') : ''}`);
   ok(g.stats.paid === paidSum && g.cash === paidSum && dup === 0 && reconcile(g).length === 0,
     `cash accounting stays exact under load: cash $${g.cash} = sum of finish payments $${paidSum}; no double payment; per-site books balance`);
-  ok(blockedReason.size > 0 && [...blockedReason].every((x) => x.length > 3), `blocked sites say why: ${[...blockedReason].slice(0, 5).map((x) => `"${x}"`).join(', ')}`);
+  ok(blockedReason.size === 0, `no factory ever waited for balls in the creek${blockedReason.size ? ': ' + [...blockedReason].join(', ') : ''}`);
   const perSec = ms / simT;
-  ok(perSec < 1000, `simulation cost ${perSec.toFixed(0)} ms per simulated second at ~${Math.round(maxBalls * 0.9)} balls (${(perSec / 10).toFixed(0)}% of one core; the browser also renders, so the ball budget is a setting)`);
+  ok(perSec < 300, `simulation cost ${perSec.toFixed(0)} ms per simulated second at ~${Math.round(maxBalls * 0.9)} balls (${(perSec / 10).toFixed(0)}% of one core)`);
   // sustained session: save, reload and keep going
   const snap = g.serialize();
   const r = new Game(creek, clone(snap), { headless: true });
+  r.streamOn = true; r.focus = g.focus;
   const audit = stageAudit(r);
   const paidBefore = new Set(r.phys.balls.filter((b) => b.paid).map((b) => b.id));
   let rep = 0;
@@ -465,7 +465,7 @@ if (want(7)) {
   ok(creek.codeRot.length === 0 && rot.s > 54 && rot.s < 60, `Code Rot observations are strongest at Crawfish Springs (stream s=${rot.s}, strength ${rot.k}); a separate layer from current and draft`);
   // the map: the order upstream, the Shelf on the east bank, the Springs as a side stream
   const A = (id) => STARTS[K[id]].s;
-  const orderOk = S_FINISH > A('grounds') && A('springs') > creek.alt.s1 && creek.alt.s1 > STARTS.find((x) => x.id === 'waterfall').s && byId.falls.s > byId.split.s
+  const orderOk = S_FINISH > A('trail') && A('springs') > creek.alt.s1 && creek.alt.s1 > STARTS.find((x) => x.id === 'waterfall').s && byId.falls.s > byId.split.s
     && byId.split.s > A('shelf') && A('shelf') > A('flatrocks') && A('flatrocks') > byId.clearing.s && byId.clearing.s > byId.farlands.s;
   ok(orderOk, `order upstream follows the creator's map: finish ${S_FINISH} → Springs confluence ${A('springs')} → falls ${byId.falls.s} → split ${byId.split.s} → Shelf ${A('shelf')} → Flat Rocks ${A('flatrocks')} → Clearing ${byId.clearing.s} → Farlands ${byId.farlands.s}`);
   const fallsGap = byId.falls.s - byId.split.s, farGap = byId.split.s - A('flatrocks');
@@ -492,10 +492,10 @@ if (want(7)) {
   // NCN and replica balls
   const arch = JSON.stringify([RACE_RECORDS, FEATURED, UNNUMBERED, ARCHIVE_CARDS, FIELD_NOTES]);
   const g = fresh();
-  openTo(g, K.slate);
+  openTo(g, K.flatrocks);
   g.owned.add('bankWorkshop');
-  give(g, K.slate, ['press', 'feeder', 'ncnStamp', 'replicaJig']);
-  g.sites[K.slate].replica = '#119 Norway Chungus';
+  give(g, K.flatrocks, ['press', 'feeder', 'ncnStamp', 'replicaJig']);
+  g.sites[K.flatrocks].replica = '#119 Norway Chungus';
   run(g, 25);
   const nb = g.phys.balls.find((b) => b.ncn);
   const idx = g.phys.balls.indexOf(nb);
@@ -510,7 +510,7 @@ if (want(8)) {
   head('8. First-person traversal (real walker, headless)');
   const r = traverse(creek, () => {}, 1);
   const M = r.main, Sp = r.springs;
-  ok(M.ok, `walked the whole creek from the Old Rolling Grounds factory past the Springs confluence, round the falls and the split, along the Shelf reach, past Flat Rocks and the Clearing to the Farlands entrance (${M.reached} waypoints, ${M.t.toFixed(0)} s, climbing ${M.climb.toFixed(1)} m${M.ok ? '' : `; stopped near ${M.stuckAt}`})`);
+  ok(M.ok, `walked the whole creek from the Trail Entrance factory past the Springs confluence, round the falls and the split, along the Shelf reach, past Flat Rocks and the Clearing, through the Farlands entrance to the head of the creek (${M.reached} waypoints, ${M.t.toFixed(0)} s, climbing ${M.climb.toFixed(1)} m${M.ok ? '' : `; stopped near ${M.stuckAt}`})`);
   ok(Sp.ok && Sp.climb > 3, `climbed the Shelf from the brushy opening by pin A up the Crawfish Springs stream to the double ponds (${Sp.reached} waypoints, ${Sp.t.toFixed(0)} s, ${Sp.climb.toFixed(1)} m up${Sp.ok ? '' : `; stopped near ${Sp.stuckAt}`})`);
   ok(M.falls + Sp.falls === 0 && M.waded + Sp.waded > 1, `waded ${(M.waded + Sp.waded).toFixed(1)} s through safe shallows without being sent back from deep water`);
   ok(r.made > 30 && r.launched > 30, `factories kept producing during the walks (${r.made} made, ${r.launched} launched, ${r.finished} finished across 7 open sites)`);
@@ -518,43 +518,41 @@ if (want(8)) {
 
 // ================================================================= 9. progression
 if (want(9)) {
-  head('9. Progression from an Upper Gorge save, no debug money');
+  head('9. Progression from a Continental Shelf save to the Farlands, no debug money');
   const g = fresh();
-  // an Upper Gorge save: the six base sites open and a well-equipped line at the Gorge
-  openTo(g, K.gorge);
-  for (let k = 0; k <= K.gorge; k++) give(g, k, ['press', 'feeder']);
-  give(g, K.gorge, FAST);
-  give(g, 0, ['rootRail', 'gravelMat', 'splashGuard', 'poolGuide', 'catchRamp', 'debrisScreen', 'spillRail', 'alderBypass', 'landingBoards', 'clearingArm', 'wideBasket']);
-  g.sel = K.gorge;
+  // a Shelf save: the first four sites open and a well-equipped line at the Shelf
+  openTo(g, K.shelf);
+  for (let k = 0; k <= K.shelf; k++) give(g, k, ['press', 'feeder']);
+  give(g, K.shelf, FAST);
+  give(g, 0, ['rootRail', 'gravelMat', 'splashGuard', 'poolGuide', 'catchRamp', 'debrisScreen', 'spillRail', 'landingBoards', 'clearingArm', 'wideBasket']);
+  g.sel = K.shelf;
   g.cash = 0;
-  const simLimit = QUICK ? 3600 : 5 * 3600;
-  const goal = QUICK ? 2 : 7; // quick mode stops after the first two new reaches
+  const simLimit = QUICK ? 3600 : 3 * 3600;
+  const goal = QUICK ? 2 : 3;
   const opened = [];
-  let invisible = 0, checks = 0, headT = null;
-  const order = ['slate', 'willow', 'splitstone', 'longeddy', 'spillway', 'sluice', 'coldspring'].map((id) => K[id]);
+  let invisible = 0, checks = 0, farT = null;
+  const order = ['flatrocks', 'clearing', 'farlands'].map((id) => K[id]);
   let shortCash = 0;
   const tStart = Date.now();
   run(g, simLimit, (e, g2) => {
-    if (e.type === 'milestone' && e.what === 'headwaters' && headT === null) headT = g2.t;
+    if (e.type === 'milestone' && e.what === 'farlands' && farT === null) farT = g2.t;
     if (e.type === 'finish' && e.start <= K.waterfall) shortCash += e.amount;
   }, (g2, i) => {
-    if (headT !== null && g2.t > headT + 300) return STOP; // keep refining a little after the milestone
+    if (farT !== null && g2.t > farT + 300) return STOP;
     if (QUICK && opened.length >= goal) return STOP;
     if (i % (120 * 5)) return;
     checks++;
-    // the next purchase is always visible: something for sale is affordable or shows progress
     const anyVisible = UPGRADES.some((u) => { const c = g2.canBuy(u.id, g2.sel); return c.ok || c.avail; }) || order.some((k) => g2.unlockable(k));
     if (!anyVisible) invisible++;
     const next = order.find((k) => !g2.sites[k].open);
     if (next !== undefined && g2.canUnlock(next)) { g2.unlock(next); g2.sel = next; give(g2, next, []); opened.push([STARTS[next].id, Math.round(g2.t)]); return; }
-    // otherwise buy the cheapest affordable factory upgrade at the newest site, keeping 25% of the next site's price
     const reserve = next !== undefined ? STARTS[next].cost * 0.25 : 0;
     const cands = UPGRADES.filter((u) => (u.tab === 'factory' && isSiteUpgrade(u.id)) || u.tab === 'creek' || u.id === 'flowMonitor').filter((u) => g2.canBuy(u.id, g2.sel).ok && g2.cash - u.price > reserve).sort((x, y) => x.price - y.price);
     if (cands.length) g2.buy(cands[0].id, g2.sel);
   });
-  ok(QUICK ? opened.length >= goal : opened.length === 7 && headT !== null, `opened ${opened.map(([id, t]) => `${id} @${(t / 60).toFixed(0)}m`).join(', ')}; first Cold Spring Headwaters finish ${headT !== null ? `at ${(headT / 60).toFixed(0)} min of play` : 'not reached'} (${((Date.now() - tStart) / 1000).toFixed(0)} s to simulate)`);
+  ok(QUICK ? opened.length >= goal : opened.length === 3 && farT !== null, `opened ${opened.map(([id, t]) => `${id} @${(t / 60).toFixed(0)}m`).join(', ')}; first Farlands finish ${farT !== null ? `at ${(farT / 60).toFixed(0)} min of play` : 'not reached'} (${((Date.now() - tStart) / 1000).toFixed(0)} s to simulate)`);
   ok(invisible === 0, `the next purchase was visible at all ${checks} checks`);
-  ok(shortCash > 0 && g.sites[0].stats.finished > 0, `short runs keep paying alongside the headwaters (${fmt(shortCash)} from the two shortest routes)`);
+  ok(shortCash > 0 && g.sites[0].stats.finished > 0, `short runs keep paying alongside the long ones (${fmt(shortCash)} from the two shortest routes)`);
 }
 
 function fmt(n) { return '$' + Math.round(n).toLocaleString('en-US'); }

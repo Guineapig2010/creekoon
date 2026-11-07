@@ -746,7 +746,6 @@ export class CreekEquipment {
       const g = groupMeshes('spillRail', MATS.steel);
       add('spillRail', g);
     }
-    add('alderBypass', groupMeshes('alderBypass', MATS.bark));
     {
       const g = groupMeshes('landingBoards', MATS.wood);
       add('landingBoards', g);
@@ -833,7 +832,7 @@ export class CreekEquipment {
   spotPos(id) {
     const spots = {
       rootRail: [549.7, 1], gravelMat: [551.9, -1], splashGuard: [450.4, -1], poolGuide: [453.0, 1], catchRamp: [329.0, -1],
-      debrisScreen: [57.5, -1, 1], spillRail: [64.5, 1, 1], alderBypass: [46.5, -1], landingBoards: [9.6, 1], clearingArm: [ARM.pivotS + 0.4, 1, 1],
+      debrisScreen: [57.5, -1, 1], spillRail: [64.5, 1, 1], landingBoards: [95.4, 1, 1], clearingArm: [ARM.pivotS + 0.4, 1, 1],
     };
     const sp = spots[id];
     if (!sp) return null;

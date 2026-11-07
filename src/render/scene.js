@@ -380,6 +380,16 @@ export class SceneView {
     const g = this.game, cr = this.creek;
     this.time += dt;
     const t = this.time;
+    // full physics only near the player, the camera's target and a followed ball; the rest of
+    // the creek's balls are streamed by the game (see Game.updateStream)
+    g.streamOn = true;
+    const fp = this.player.pos, focus = (this.focusPts ||= [{ x: 0, z: 0 }, { x: 0, z: 0 }, { x: 0, z: 0 }]);
+    focus[0].x = fp.x; focus[0].z = fp.z;
+    const tgt = this.mode === 'fp' ? fp : this.rig.target;
+    focus[1].x = tgt.x; focus[1].z = tgt.z;
+    focus[2].x = this.camera.position.x; focus[2].z = this.camera.position.z;
+    g.focus = focus;
+    g.followId = this.mode === 'follow' ? this.rig.follow : null;
     for (const [k, ws] of this.workshops) ws.configure(g.sites[k].owned);
     this.finish.configure(g.owned);
     this.creekEq.configure(g);

@@ -1,9 +1,9 @@
 # Creek Rolling Tycoon
 
 Make tennis balls, roll them down a real-scale 3D creek, and turn every finish into cash.
-Start with one ball and a wooden chute at the trail-entrance finish. End with fourteen
-factories feeding a creek full of balls from the Cold Spring Headwaters, deep in the Farlands,
-about 700 m of creek above the same finish gate.
+Start with one ball and a wooden chute at the trail-entrance finish. End with seven
+factories running flat out, from the Farlands entrance about 530 m upstream down to the same
+finish gate, with well over a thousand balls in the creek at once.
 
 **make → roll → finish → earn → upgrade**
 
@@ -60,13 +60,14 @@ with the USGS main channel where the map has no marks) at **half scale**: every 
 the map is halved, while balls, water, rocks and trees stay real size. North is up in the map
 view. Walking upstream from the finish:
 
-- **Old Rolling Grounds** just above the trail-entrance finish (unpinned on the map).
+- The **Trail Entrance** factory just above the finish (unpinned on the map).
 - The **Crawfish Springs confluence** and, across from photo pin A, the brushy opening where
   you climb the Shelf to reach the Springs.
 - The **falls** on the primary (creek-right) route, about 104 m above the finish. The
-  **alternate branch** rejoins below the plunge pool.
+  **alternate branch** (creek-left, stepping down through the woods) rejoins below the
+  plunge pool.
 - The **route split** 33 m above the falls (67 m on the map), with the **taped sign** just
-  upstream, and **Waterfall Run** above it.
+  upstream, and the **Waterfall** launch above it.
 - The long reach under the **Continental Shelf**, a wooded rock terrace on the creek's
   **east bank** (on your right walking upstream). It runs all the way up to the deep pools.
   The Shelf launch and the Folk Draft drop are on this reach.
@@ -74,30 +75,39 @@ view. Walking upstream from the finish:
   a thick sandstone ledge overhanging a dark undercut, with a cobble bar and shallow water
   (modelled on the creator's photo).
 - **The Clearing and deep pools** (Nigatron), grass on the west and the Shelf on the east.
-  Then Alder Bend and the **Farlands entrance**, where the Shelf ends.
-- **The Farlands**: the Upper Gorge and the seven game-only headwater reaches (Slate Steps to
-  Cold Spring Headwaters).
+- The **Farlands entrance**, where the Shelf ends. The creek begins a little way into the
+  Farlands, in shallow gravel braids.
+
+Only places on the creator's map are in the game. Every launch site, trouble spot and creek
+upgrade is at one of them.
 
 **Crawfish Springs** is its own secondary stream:
 
 - It runs from the spring pool and the **double ponds** in the deep forest up on the Shelf.
 - A runoff chute takes it down through the woods.
-- It cuts a gully through the east bank into the creek below the falls.
+- It cuts a gully through the east bank into the creek below the falls. Water runs the whole
+  way: no stretch of the stream dries out or disappears under the ground.
 - Springs balls run down that stream and continue in the creek to the finish.
 
 `tools/mapcompare.mjs` draws the game's creek over the creator's marks to check the match.
 
 ### Play
 
-- **Fourteen permanent factories**, one at every open launch site. Each runs its own press,
-  feeder, recipe and upgrades on its own clock, with one shared balance.
-  - Shared reaches release balls fairly.
-  - A network ball budget applies backpressure.
+- **Seven permanent factories**, one at every launch site: Trail Entrance, Waterfall,
+  Crawfish Springs, Continental Shelf, Flat Rocks, the Clearing and the Farlands Entrance.
+  Each runs its own press, feeder, recipe and upgrades on its own clock, with one shared
+  balance.
+  - Machines run flat out: a full creek never holds a launch back. Trouble spots cost balls
+    and time instead, and their fixes win both back.
+  - Balls near you (and near the camera, or the ball you follow) get the full physics. Balls
+    farther away ride the current on a cheap streamed path and take each trouble spot's odds,
+    so the creek can hold thousands of balls.
+  - When the finish basket and overflow crate are both full, the crew lifts balls out by hand.
   - The Bank Workshop carts surplus balls between factories.
 - **Ball lifecycle IDs**: each ball has one ID, origin site, launch site and recipe from
   manufacture to finish or loss.
-- **Recipes, orders, upgrades**: six recipes, eight optional shipment orders and 80
-  upgrades, of which 50 came with the expansion, the 8 lore upgrades among them.
+- **Recipes, orders, upgrades**: six recipes, eight optional shipment orders and 71
+  upgrades, 7 of them lore upgrades.
 - **First person**: walk the banks and wade the shallows. You can climb the Shelf to the
   Springs and follow any ball down the creek. The north-up map shows the Tycoon and
   Field-notes layers.
@@ -106,7 +116,9 @@ view. Walking upstream from the finish:
 - **Physics**: a fixed 120 Hz step with buoyancy, drag against a baked flow field (eddies,
   plunge-pool rollers, spring boils, the Folk Draft downdraft) and collisions against the
   same terrain and rocks you see.
-- **Saves**: older saves upgrade automatically, and the original is kept as a backup.
+- **Saves**: older saves upgrade automatically, and the original is kept as a backup. Sites
+  and upgrades at places that are not on the map move to the nearest real place or are
+  refunded.
 
 See `CHANGELOG.md` for details, tuning values and provisional placements.
 
@@ -122,7 +134,7 @@ src/core/                  simulation — no DOM, runs headless in Node
   config.js                launch sites, reaches, recipes, orders, all upgrades, factory numbers
   creek.js                 channel geometry, heightfield, water, flow field, wind, rocks, colliders
   physics.js               ball dynamics, contacts, ball-to-ball collisions, recipe effects
-  game.js                  factories, admission and fairness, carts, orders, payouts, save format v2
+  game.js                  factories, ball streaming, carts, orders, payouts, save format v2
   archive.js               read-only Creek League archive and field notes
   fieldmap.js              generated from data/ by tools/build-fieldmap.mjs
 src/render/                three.js renderer
@@ -166,17 +178,20 @@ drives the same simulation the browser runs and checks:
 
 B. Base game: the first ball pays $10, early automation, press/hopper behaviour, save/reload.
 1. Migration of genuine early, mid-game and finished v1 saves.
-2. Every new launch reaches the original finish through both forks and their merges, and pays
-   once; checkpoints pay nothing.
+2. Every launch reaches the original finish, through both waterfall branches and the Springs
+   stream, and pays once. The Route Split Gate on Balanced uses both branches. Checkpoints pay
+   nothing.
 3. Factory accounting across three sites and the Bank Workshop, with pause, drain and release.
-4. Payout math ($650 / $755), reload in transit, the same-step order cap.
-5. Willow Narrows backup and its fix; a fast press waiting on its post and the launch fix.
-6. Fourteen factories, the longest route and ~500 balls in flight; fairness, exact cash,
-   save under load.
+4. Payout math (Flat Rocks: $182, $242 with an order slot), reload in transit, the same-step
+   order cap.
+5. The Clearing's deep pools and their fixes; machines never held by the creek; a fast press
+   waiting on its post and the launch fix.
+6. All seven factories flat out, over a thousand balls in flight (far balls streamed), exact
+   cash, save under load.
 7. Canon checks (draft direction, Code Rot, landmarks, archive entries, NCN and replicas).
-8. First-person walks with the real walker: the whole creek from the finish to the Farlands
-   entrance, and the Shelf climb up the Springs stream to the double ponds.
-9. Progression from an Upper Gorge save to the first Cold Spring Headwaters finish.
+8. First-person walks with the real walker: the whole creek from the finish to the head of the
+   creek in the Farlands, and the Shelf climb up the Springs stream to the double ponds.
+9. Progression from a Continental Shelf save to the first Farlands finish.
 
 Graphics quality (⚙ menu) changes the terrain and water mesh resolution, shadows, particle
 counts and pixel ratio. Physics and payouts are identical at every setting.

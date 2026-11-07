@@ -12,10 +12,9 @@ const V = (a) => new THREE.Vector3(a[0], a[1], a[2]);
 
 // Where for-sale stakes stand for the new creek equipment (s, bank side)
 export const NEW_SPOTS = {
-  slateBumpers: [-12.2, 1], slateOutlet: [-7.9, 1], leafGrate: [-14.75, -1], willowShield: [-26.1, 1], willowFlare: [-22.9, -1],
-  splitGate: [-51.6, 1], splitMergeRail: [-40.8, 1], basinBoom: [-69, 1], basinVane: [-65.6, 1], spillApron: [-90.2, 1],
-  spillSkimmer: [-87.8, 1], sluiceAlternator: [-121.4, 1], sluiceMerge: [-108.4, 1], headGuide: [-146.5, -1], headRails: [-134.2, 1],
-  draftRibbon: [327.4, -1], windScreen: [326.2, -1], springsSampler: [58.2, -1, 'springs'], habitatBypass: [57.3, 1, 'springs'], branchSweeper: [47.4, -1],
+  splitGate: [416.2, 1], splitMergeRail: [467.2, 1], spillSkimmer: [454.6, 1],
+  basinBoom: [97.0, 1], basinVane: [99.6, 1], branchSweeper: [99.2, -1], headGuide: [12.0, 1], headRails: [22.0, -1],
+  draftRibbon: [327.4, -1], windScreen: [326.2, -1], springsSampler: [58.2, -1, 'springs'], habitatBypass: [57.3, 1, 'springs'],
 };
 
 /** Historical / field-note landmarks and their game placement status. */
@@ -80,77 +79,42 @@ export class Expansion {
       }
       return g;
     };
-    add('willowShield', groupMeshes('willowShield', MATS.steel));
-    add('willowFlare', groupMeshes('willowFlare', MATS.wood));
-    add('slateBumpers', groupMeshes('slateBumpers', MATS.rubber));
-    add('leafGrate', groupMeshes('leafGrate', MATS.darkSteel));
     add('splitMergeRail', groupMeshes('splitMergeRail', MATS.wood));
     add('basinBoom', buoyLine(cr.basinBoomPts, MATS.yellow, MATS.orange));
-    add('spillApron', groupMeshes('spillApron', MATS.wood));
-    add('headGuide', buoyLine(cr.headGuidePts, MATS.white, MATS.blue));
+    add('headGuide', (() => { const g = buoyLine(cr.headGuidePts, MATS.white, MATS.blue); if (cr.headGuidePts2) g.add(buoyLine(cr.headGuidePts2, MATS.white, MATS.blue)); return g; })());
     add('headRails', groupMeshes('headRails', MATS.steel));
     add('habitatBypass', groupMeshes('habitatBypass', MATS.bark));
-    // Splitstone gate: a pivoting boom that swings between the two lanes
+    // Route Split Gate: a boom pivoting on the nose between the branches. Direct lays it along the
+    // east edge across the alternate branch's mouth; Calm swings it to the west bank to turn balls in.
     {
       const g = new THREE.Group();
       const T = V(cr.splitGatePivot);
       g.position.copy(T);
       g.add(cyl(0.05, 0.06, 0.5, MATS.darkSteel, 10).translateY(0.1));
       const arm = new THREE.Group();
-      const len = 0.95;
-      const boom = box(len, 0.04, 0.05, MATS.wood, len / 2, 0, 0);
-      arm.add(boom);
+      arm.add(box(1, 0.04, 0.05, MATS.wood, 0.5, 0, 0));
       g.add(arm);
-      const fr = cr.frame(-51.15);
-      g.rotation.y = Math.atan2(fr.tz, -fr.tx); // local +x points upstream
+      const ang = (s2, d2) => { const p = cr.worldXZ(s2, d2); const dx = p.x - T.x, dz = p.z - T.z; return [Math.atan2(-dz, dx), Math.hypot(dx, dz)]; };
+      const dir = ang(416.8, cr.c(416.8) - cr.wL(416.8) + 0.02), calm = ang(417.0, cr.c(417.0) + cr.wR(417.0) - 0.02);
+      this.gatePose = { direct: dir, calm, mid: [(dir[0] + calm[0]) / 2, (dir[1] + calm[1]) / 2] };
+      arm.rotation.y = this.gatePose.mid[0]; arm.scale.x = this.gatePose.mid[1];
       this.gateArm = arm;
       add('splitGate', g);
     }
-    // Sluice alternator: two flaps at the rib tip
+    // Deep Pools flow vane: three angled fins along the eddy line
     {
       const g = new THREE.Group();
-      g.position.copy(V(cr.sluicePivot));
-      g.add(cyl(0.04, 0.05, 0.4, MATS.darkSteel, 10).translateY(0.1));
-      const flap = new THREE.Group();
-      flap.add(box(0.7, 0.05, 0.03, MATS.steel, 0.35, 0, 0));
-      g.add(flap);
-      const fr = cr.frame(-121);
-      g.rotation.y = Math.atan2(fr.tz, -fr.tx);
-      this.sluiceFlap = flap;
-      add('sluiceAlternator', g);
-    }
-    // Sluice merge basin: low wing walls opening the gravel bar
-    {
-      const g = new THREE.Group();
-      for (const side of [-1, 1]) {
-        const a = [...Object.values(cr.worldXZ(-110.6, cr.c(-110.6) + side * 0.62))];
-        const pa = cr.worldXZ(-110.6, cr.c(-110.6) + side * 0.62), pb = cr.worldXZ(-106.4, cr.c(-106.4) + side * 0.8);
-        void a;
-        g.add(rod([pa.x, cr.y0(-110.6) + 0.05, pa.z], [pb.x, cr.y0(-106.4) + 0.05, pb.z], 0.025, MATS.darkWood));
-      }
-      add('sluiceMerge', g);
-    }
-    // Slate Pool Outlet: a cut board lip at the outlet
-    {
-      const g = new THREE.Group();
-      const pa = cr.worldXZ(-7.75, cr.c(-7.75) - 0.3), pb = cr.worldXZ(-7.75, cr.c(-7.75) + 0.3);
-      g.add(rod([pa.x, cr.y0(-7.75) - 0.03, pa.z], [pb.x, cr.y0(-7.75) - 0.03, pb.z], 0.02, MATS.wood));
-      add('slateOutlet', g);
-    }
-    // Basin flow vane: three angled fins at the eddy line
-    {
-      const g = new THREE.Group();
-      for (const ss of [-70.5, -68, -65.5]) {
-        const p = cr.worldXZ(ss, cr.c(ss) - 0.05);
+      for (const ss of [97.0, 98.3, 99.6]) {
+        const p = cr.worldXZ(ss, cr.c(ss) - 0.5);
         const fin = box(0.4, 0.12, 0.02, MATS.darkSteel, 0, 0, 0);
-        fin.position.set(p.x, cr.y0(ss) - 0.03, p.z);
+        fin.position.set(p.x, cr.waterLevel(ss, cr.c(ss) - 0.5) - 0.03, p.z);
         const fr = cr.frame(ss);
         fin.rotation.y = Math.atan2(-fr.tz, fr.tx) - 0.5;
         g.add(fin);
       }
       add('basinVane', g);
     }
-    // Sweepers: the Norway-style branch at Alder Bend and the Spillway pool skimmer
+    // Sweepers: the Norway-style branch at the deep pools and the plunge pool skimmer
     this.sweeperPivots = {};
     for (const S of SWEEPERS) {
       if (S.id === 'arm') continue;
@@ -166,7 +130,7 @@ export class Expansion {
       pivot.position.y = 0.42;
       const reach = (cr.wR(s) + cr.wL(s)) * 0.9;
       if (S.id === 'branch') {
-        // a cut alder branch with forked twigs
+        // a cut branch with forked twigs
         pivot.add(rod([0, 0, 0], [-reach, -0.25, 0], 0.03, MATS.bark, 7));
         for (let k = 1; k < 4; k++) pivot.add(rod([-reach * k / 4, -0.08 * k, 0], [-reach * k / 4 - 0.15, -0.08 * k - 0.15, 0.12 * (k % 2 ? 1 : -1)], 0.012, MATS.bark, 5));
       } else {
@@ -462,12 +426,10 @@ export class Expansion {
     if (this.gateArm) {
       const toDirect = !game.phys.disabled.has('gateDirect');
       const toCalm = !game.phys.disabled.has('gateCalm');
-      const want = toDirect ? 0.75 : toCalm ? -0.75 : 0;
-      this.gateArm.rotation.y += (want - this.gateArm.rotation.y) * Math.min(1, dt * 6);
-    }
-    if (this.sluiceFlap) {
-      const want = !game.phys.disabled.has('sluiceToRight') ? 0.7 : !game.phys.disabled.has('sluiceToLeft') ? -0.7 : 0;
-      this.sluiceFlap.rotation.y += (want - this.sluiceFlap.rotation.y) * Math.min(1, dt * 8);
+      const G = this.gatePose, want = toDirect ? G.direct : toCalm ? G.calm : G.mid;
+      const k = Math.min(1, dt * 6);
+      this.gateArm.rotation.y += (want[0] - this.gateArm.rotation.y) * k;
+      this.gateArm.scale.x += (want[1] - this.gateArm.scale.x) * k;
     }
     SWEEPERS.forEach((S, i) => {
       const pv = this.sweeperPivots[S.id];

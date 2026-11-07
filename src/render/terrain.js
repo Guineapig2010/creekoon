@@ -17,11 +17,14 @@ const COL = {
   moss: new THREE.Color(0.25, 0.33, 0.14),
 };
 
-function dSamples(quality) {
+function dSamples(quality, eastFine = false) {
   const fine = quality === 'low' ? 0.1 : quality === 'medium' ? 0.085 : 0.07;
   const arr = [];
-  for (let d = -10; d < -3.2; d += 0.4) arr.push(d);
-  for (let d = -3.2; d < 4.4; d += fine) arr.push(d);
+  // the main creek's east side carries the alternate waterfall branch and the Springs gully:
+  // sample it finely too, or the ground mesh spans over those narrow channels
+  const d0 = eastFine ? -9.85 : -3.2;
+  for (let d = -10; d < d0; d += 0.4) arr.push(d);
+  for (let d = d0; d < 4.4; d += fine) arr.push(d);
   for (let d = 4.4; d <= 10.001; d += 0.4) arr.push(d);
   if (arr[arr.length - 1] < 10) arr.push(10);
   return arr;
@@ -99,7 +102,7 @@ export function worldBounds(creek, margin = 60) {
 export function buildTerrain(creek, quality, main = null) {
   const S_MIN = creek.sMin, S_MAX = creek.sMax;
   const ds = quality === 'low' ? 0.3 : quality === 'medium' ? 0.24 : 0.2;
-  const dArr = dSamples(quality);
+  const dArr = dSamples(quality, creek.isMain);
   const nS = Math.floor((S_MAX - S_MIN) / ds) + 1;
   const nD = dArr.length;
   const pos = new Float32Array(nS * nD * 3);

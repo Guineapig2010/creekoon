@@ -9,7 +9,7 @@ export function variantOf(spec) {
 
 export class BallRenderer {
   constructor(scene, quality) {
-    this.cap = 520;
+    this.cap = 3000; // factories run flat out: the creek can hold a couple of thousand balls
     const seg = quality === 'low' ? 16 : 32;
     const geo = new THREE.SphereGeometry(BALL_R, seg, Math.round(seg * 0.6));
     const size = quality === 'low' ? 512 : 1024;

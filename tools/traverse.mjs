@@ -1,7 +1,7 @@
 // First-person traversal check with the real walker (terrain, boulders, trunks, structures,
 // deep-water return), headless. Two walks on the map-true creek:
-//   1. the main creek, from the Old Rolling Grounds factory up the west bank, round the
-//      falls and the Shelf drop, past Flat Rocks and the Clearing to the Farlands entrance;
+//   1. the main creek, from the Trail Entrance factory up the west bank, round the
+//      falls and the Shelf drop, past Flat Rocks and the Clearing, into the Farlands to the creek head;
 //   2. the Shelf climb: from the creek's east bank by photo pin A up into the Crawfish
 //      Springs stream corridor and on to the double ponds.
 // Factories keep running throughout.
@@ -42,7 +42,13 @@ function walk(p, g, wps, creek, maxT) {
   const reached = [];
   const made0 = g.stats.made;
   p.onFall = () => { falls++; };
-  p.placeAt(wps[0].x, wps[0].z, 0);
+  // start on clear ground (a riparian trunk may stand on the nominal start point)
+  let sx = wps[0].x, sz = wps[0].z;
+  for (let r = 0; r < 2 && p.blocked(wps[0].x, wps[0].z, sx, sz); r += 0.1) {
+    for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6, x = wps[0].x + Math.cos(a) * r, z = wps[0].z + Math.sin(a) * r; if (!p.blocked(x, z, x, z)) { sx = x; sz = z; break; } }
+    if (!p.blocked(wps[0].x, wps[0].z, sx, sz)) break;
+  }
+  p.placeAt(sx, sz, 0);
   const ys = [];
   while (wi < wps.length && t < maxT) {
     const tgt = wps[wi];
@@ -102,6 +108,8 @@ export function traverse(creek, log = console.log, quality = 1) {
     main.push(W(creek, s, off));
   }
   main.push(W(creek, 33.5, creek.wR(33.5) + 1.5, 'Farlands entrance'));
+  for (let s = 27; s >= 5; s -= 7) main.push(W(creek, s, creek.wR(s) + 1.5));
+  main.push(W(creek, 2.5, creek.wR(2.5) + 1.5, 'head of the creek in the Farlands'));
   const r1 = walk(p, g, main, creek, 900);
   // 2. the Shelf climb into Crawfish Springs: up the east bank by pin A, then along the stream
   const climb = [W(creek, 514, -(creek.wL(514) + 1.2), 'east bank at pin A'), W(creek, 505, -(creek.wL(505) + 2.5), 'brushy opening')];
