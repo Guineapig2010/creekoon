@@ -1,5 +1,94 @@
 # Changelog
 
+## 2.1.0 — The creek laid out on the creator's map
+
+### Changed
+
+- **The creek follows the creator's annotated Arroyo Trabuco map**, north up, at half scale.
+  The source is `data/field_features.geojson`, with the USGS main channel where the map has
+  no marks.
+  - Map distances are halved; balls, water, rocks and trees stay real size.
+  - The centreline is generated into `src/core/layout.js`.
+  - The old layout (a gentle S-curve with every place squeezed into 98 m) is gone.
+- **New order and distances, walking upstream from the finish:**
+  - Old Rolling Grounds.
+  - The Crawfish Springs confluence (s 497), with the brushy Shelf climb across from photo
+    pin A.
+  - The falls (104 m above the finish). The waterfall is no longer next to the start.
+  - The route split and taped sign, 33 m above the falls (67 m on the map). Waterfall Run is
+    above it.
+  - The long Shelf reach and the Shelf launch.
+  - **Flat Rocks**, 270 m above the split and no longer jammed in right after the
+    waterfall.
+  - The Clearing and deep pools.
+  - The Farlands entrance (s 33.5), where the Shelf ends.
+  - The seven Farlands reaches, unchanged.
+- **Continental Shelf on the right (east) bank.** It is a wooded rock terrace along the creek
+  from the Springs climb all the way up to the deep pools; it was previously on the left. It
+  is a cliff only at the Shelf drop.
+- **Crawfish Springs is its own secondary stream.**
+  - The spring pool and the deep-forest double ponds sit about 2.7 m up on the Shelf, 43 m
+    east of the creek.
+  - A runoff chute runs down through the woods and cuts a gully through the east bank into
+    the creek below the falls.
+  - It is a second channel in the simulation. Its balls hand over to the creek at the
+    confluence and are paid once at the finish.
+  - The Springs equipment, driftwood, Code Rot and crayfish moved onto the stream.
+- **Flat Rocks is modelled on the creator's photo.**
+  - A thick tan sandstone ledge, about 1.75 m tall, overhangs a deep dark undercut, with a
+    thinner slab inside.
+  - A bar of rounded grey, blue-grey and tan cobbles runs between the ledge and the wide,
+    shallow water.
+  - Taped race signs hang on the ledge face, with willows close behind.
+  - The Flat Rocks launch is just downstream of the ledge.
+- **The waterfall split is a real fork.** The alternate branch is 51 m long, on the
+  creek-left (east), stepping down seven times and rejoining below the plunge pool.
+- **Sites, payouts and run times follow the new distances.**
+  - Site order: Grounds $10 (5 s), Waterfall Run $30 (~2 min), Crawfish Springs $65
+    (~2 min), Continental Shelf $120 (~3 min), Flat Rocks $170 (~5 min), Alder Bend $220,
+    Upper Gorge $400 (~7 min), then the Farlands reaches up to Cold Spring Headwaters
+    (~9.5 min).
+  - Long open reaches allow about 1.5 balls in flight per metre. The ball budget is
+    unchanged.
+- **Saves from before this change load with the new layout.** Ball positions from the old
+  geography no longer exist:
+  - Unpaid rolling balls return to the front of their own factory's queue, keeping their ID,
+    recipe and markings.
+  - Order slots are released and reserved again on relaunch, and carts return their loads.
+  - The player respawns at a factory.
+- **Faster world build.** A coarse nearest-centreline grid, coarser far banks in the bed
+  bake, and lighter rocks, terrain and water meshes.
+- **Walking:** the walker can climb from the creek's corridor into the Springs stream's
+  corridor.
+
+### Tests actually run (headless playtest, quick mode, plus browser checks)
+
+- **Playtest sections B, 1–4, 5, 7 and 8 pass.**
+  - Section 2 now includes the Springs stream: balls go down the stream, into the creek and
+    are paid once. Both waterfall branches are used. With the Splitstone Gate on Balanced,
+    both lanes carry balls and come back together past the merge.
+  - Section 7 checks the map order, the distances, the Shelf on the east bank, the Springs as
+    a separate stream up on the Shelf, and the Flat Rocks ledge.
+  - Section 8 walks the whole creek from the Grounds factory to the Farlands entrance, and
+    climbs the Shelf up the Springs stream to the double ponds.
+  - Section 5: Willow Narrows goes from 53 to 100 balls/min through the pinch with the fix.
+- **Section 6:** the full 650-ball budget in flight at the peak, with every factory launching
+  and exact cash. Physics costs about 19% of one core at about 585 balls.
+- **Browser (Chromium, software GL):**
+  - First-person views at the Grounds, Flat Rocks, the Springs ponds, the falls and the Shelf
+    reach.
+  - The north-up overhead map.
+  - `tools/mapcompare.mjs`, which draws the game's creek over the creator's marks.
+
+### Provisional
+
+- The finish (trail entrance) is unpinned on the map. It is placed about 80 m below photo
+  pin A.
+- Where the USGS line and the creator's marks disagree, the marks win. Near the waterfall
+  they differ by about 75 m.
+- The alternate branch keeps within 5 m of the creek; the map shows about 25 m.
+- The Flat Rocks ledge length and the pond outlines are illustrative.
+
 ## 2.0.0 — New Creek Nation expansion
 
 ### Added

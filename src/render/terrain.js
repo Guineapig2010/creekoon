@@ -208,8 +208,8 @@ export function landHeight(creek, x, z) {
 }
 
 export function buildFarTerrain(creek, quality) {
-  const step = quality === 'low' ? 2.5 : 1.5;
-  const { x0, x1, z0, z1 } = worldBounds(creek, 90);
+  const step = quality === 'low' ? 3.5 : 2.2;
+  const { x0, x1, z0, z1 } = worldBounds(creek, 260);
   const nx = Math.round((x1 - x0) / step) + 1, nz = Math.round((z1 - z0) / step) + 1;
   const pos = new Float32Array(nx * nz * 3), col = new Float32Array(nx * nz * 3), uv = new Float32Array(nx * nz * 2);
   const inside = new Uint8Array(nx * nz);
