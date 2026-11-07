@@ -6,6 +6,7 @@ import { STARTS, S_FINISH } from '../core/config.js';
 import { WORKSHOP } from '../core/game.js';
 import { mulberry32, fbm } from '../core/noise.js';
 import { barkTexture, grassTexture } from './textures.js';
+import { foliageGeometry, foliageMaterials, foliageCards } from './foliage.js';
 
 /** Density of creek-side vegetation by place (1 = normal woodland). side < 0 is the east bank. */
 function density(creek, s, side) {
@@ -29,16 +30,17 @@ export function buildRiparian(creek, quality, main = null) {
   root.add(canopy);
   const trunkCols = [];
   const bark = barkTexture();
-  const barkPale = new THREE.MeshStandardMaterial({ map: bark, color: 0xc8c0b0, roughness: 0.95 });
-  const barkDark = new THREE.MeshStandardMaterial({ map: bark, color: 0x7a6650, roughness: 1 });
-  const crownMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true });
-  const shrubMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, flatShading: true });
+  const barkPale = new THREE.MeshStandardMaterial({ map: bark, color: 0xe6e0d4, roughness: 0.95 }); // sycamore
+  const barkDark = new THREE.MeshStandardMaterial({ map: bark, color: 0x9a8a76, roughness: 1 }); // oak
+  // leafy crowns and shrubs (alpha-cut leaf cards, rounded light, leaf-shaped shadows)
+  const fol = foliageMaterials();
+  const crownMat = fol.mat, shrubMat = fol.mat;
   const cardTex = grassTexture(64, 128);
   const cardMat = new THREE.MeshStandardMaterial({ map: cardTex, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 1 });
   cardMat.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', THREE.ShaderChunk.normal_fragment_begin.replace('normal *= faceDirection;', '')); };
-  const trunkGeo = new THREE.CylinderGeometry(0.55, 1, 1, 7, 1); trunkGeo.translate(0, 0.5, 0);
-  const crownGeo = jitter(new THREE.IcosahedronGeometry(1, 1), 0.3, 3);
-  const shrubGeo = jitter(new THREE.IcosahedronGeometry(1, 1), 0.4, 5);
+  const trunkGeo = jitterTrunk(new THREE.CylinderGeometry(0.5, 1, 1, 11, 6)); trunkGeo.translate(0, 0.5, 0);
+  const crownGeo = foliageGeometry(foliageCards(quality), 3, 0.8);
+  const shrubGeo = foliageGeometry(foliageCards(quality, 'shrub'), 5, 0.75);
   const twigGeo = new THREE.CylinderGeometry(0.5, 1, 1, 5, 1); twigGeo.translate(0, 0.5, 0);
   const cardGeo = crossed();
   const L2 = {};
@@ -141,6 +143,7 @@ export function buildRiparian(creek, quality, main = null) {
       m.instanceMatrix.needsUpdate = true;
       if (m.instanceColor) m.instanceColor.needsUpdate = true;
       m.castShadow = cast; m.receiveShadow = true;
+      if (mat === fol.mat) m.customDepthMaterial = fol.depth;
       m.computeBoundingSphere();
       parent.add(m);
       return m;
@@ -161,10 +164,10 @@ export function buildRiparian(creek, quality, main = null) {
     if (crownMesh) {
       crowns.forEach((c, i) => {
         qt.setFromAxisAngle(up, c.hue * 6.28);
-        m4.compose(pv.set(c.x, c.y, c.z), qt, sc.set(c.r, c.r * c.sy, c.r));
+        m4.compose(pv.set(c.x, c.y, c.z), qt, sc.set(c.r * 0.9, c.r * c.sy, c.r * 0.9));
         crownMesh.setMatrixAt(i, m4);
-        // yellow-green to deep green; some backlit and paler
-        col.setHSL(0.22 + c.hue * 0.08, 0.42 + c.hue * 0.15, 0.2 + c.lit * 0.14);
+        // sycamore and oak greens: yellow-green to deep green, some paler in the sun
+        col.setHSL(0.2 + c.hue * 0.09, 0.22 + c.hue * 0.2, 0.62 + c.lit * 0.24);
         crownMesh.setColorAt(i, col);
       });
       crownMesh.instanceMatrix.needsUpdate = true; crownMesh.instanceColor.needsUpdate = true; crownMesh.computeBoundingSphere();
@@ -173,9 +176,9 @@ export function buildRiparian(creek, quality, main = null) {
     if (shrubMesh) {
       shrubs.forEach((c, i) => {
         qt.setFromAxisAngle(up, c.hue * 6.28);
-        m4.compose(pv.set(c.x, c.y, c.z), qt, sc.set(c.r, c.r * 0.75, c.r));
+        m4.compose(pv.set(c.x, c.y, c.z), qt, sc.set(c.r * 0.95, c.r * 0.75, c.r * 0.95));
         shrubMesh.setMatrixAt(i, m4);
-        col.setHSL(0.17 + c.hue * 0.12, 0.38 + c.hue * 0.2, 0.17 + c.hue * 0.12);
+        col.setHSL(0.16 + c.hue * 0.12, 0.22 + c.hue * 0.22, 0.5 + c.hue * 0.22);
         shrubMesh.setColorAt(i, col);
       });
       shrubMesh.instanceMatrix.needsUpdate = true; shrubMesh.instanceColor.needsUpdate = true; shrubMesh.computeBoundingSphere();
@@ -213,6 +216,19 @@ export function buildRiparian(creek, quality, main = null) {
   root.userData.trunks = trunkCols;
   root.userData.canopy = canopy;
   return root;
+}
+
+/** A tapered trunk with a little bark relief and a slight wander. */
+function jitterTrunk(g) {
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    const a = Math.atan2(z, x), t = y + 0.5;
+    const k = 1 + 0.07 * Math.sin(a * 5 + t * 3) + 0.04 * Math.sin(a * 11);
+    p.setXYZ(i, x * k + Math.sin(t * 2.6) * 0.18, y, z * k + Math.cos(t * 2.1) * 0.12);
+  }
+  g.computeVertexNormals();
+  return g;
 }
 
 function jitter(g, amt, seed) {

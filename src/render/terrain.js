@@ -4,7 +4,8 @@ import { MAT } from '../core/creek.js';
 import { fbm, vnoise, mulberry32, clamp, smoothstep } from '../core/noise.js';
 import { STARTS, S_FINISH } from '../core/config.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { detailTexture, grassTexture, barkTexture } from './textures.js';
+import { detailTexture, groundTexture, grassTexture, barkTexture } from './textures.js';
+import { foliageGeometry, foliageMaterials, foliageCards } from './foliage.js';
 
 const COL = {
   gravel: new THREE.Color(0.5, 0.42, 0.31),
@@ -144,8 +145,9 @@ export function buildTerrain(creek, quality, main = null) {
       if (main.locate(x, z, -1, L) && Math.abs(L.d) < 9.75 && L.s > main.sMin && L.s < main.sMax) pos[k * 3 + 1] -= 3;
     }
   }
-  const detail = detailTexture(256, 3, 0.42);
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, map: detail, roughness: 0.92, metalness: 0 });
+  // ground detail: soil noise with leaf litter, pebbles and twigs (vertex colours give the hue)
+  const detail = groundTexture(quality === 'low' ? 256 : 512, 3);
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, map: detail, bumpMap: detail, bumpScale: 1.2, roughness: 0.94, metalness: 0 });
   // split into ~10 m chunks so off-screen parts of the long creek are culled
   const group = new THREE.Group();
   group.name = 'terrain';
@@ -275,7 +277,7 @@ export function buildRocks(creek) {
   const meshes = [];
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), ps = new THREE.Vector3();
   groups.forEach((list, vi) => {
-    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: detail, roughness: 0.88 });
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: detail, bumpMap: detail, bumpScale: 2.2, roughness: 0.88 });
     mat.onBeforeCompile = (sh) => {
       sh.vertexShader = sh.vertexShader
         .replace('#include <common>', '#include <common>\nattribute float aWaterY;\nattribute float aMoss;\nvarying float vWaterY;\nvarying float vMoss;\nvarying vec3 vWPos;\nvarying vec3 vWNorm;')
@@ -339,7 +341,7 @@ export function buildVegetation(creek, quality, farTrees = true) {
     const L = landHeight(creek, x, z);
     if (L.inside || L.ad < 9.5 || keepClear(L)) continue;
     if (L.ad < 9 && rnd() < 0.5) continue;
-    const conifer = rnd() < 0.55;
+    const conifer = rnd() < 0.15; // the canyon is mostly oak and sycamore woodland
     const hgt = (conifer ? 7 : 5) + rnd() * 6;
     const t = { x, y: L.h, z, h: hgt, conifer, r: 0.12 + rnd() * 0.12 };
     trunks.push(t);
@@ -358,9 +360,11 @@ export function buildVegetation(creek, quality, farTrees = true) {
     return g;
   };
   jitter(coneGeo, 0.25, 3);
-  const coneMesh = new THREE.InstancedMesh(coneGeo, new THREE.MeshStandardMaterial({ color: 0x2f4a26, roughness: 0.95, flatShading: true }), cones.length * 3);
-  const crownGeo = jitter(new THREE.IcosahedronGeometry(1, 1), 0.35, 9);
-  const crownMesh = new THREE.InstancedMesh(crownGeo, new THREE.MeshStandardMaterial({ color: 0x4f6b2a, roughness: 0.95, flatShading: true }), crowns.length * 3);
+  const fol = foliageMaterials();
+  const coneMesh = new THREE.InstancedMesh(coneGeo, new THREE.MeshStandardMaterial({ color: 0x2f4a26, roughness: 0.95 }), cones.length * 3);
+  const crownGeo = foliageGeometry(foliageCards(quality, 'far'), 9, 0.8);
+  const crownMesh = new THREE.InstancedMesh(crownGeo, fol.mat, crowns.length * 3);
+  crownMesh.customDepthMaterial = fol.depth;
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
   const col = new THREE.Color();
   trunks.forEach((t, i) => {
@@ -386,7 +390,7 @@ export function buildVegetation(creek, quality, farTrees = true) {
       q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rnd() * 6.28);
       m4.compose(p.set(t.x + (rnd() - 0.5) * rad, t.y + t.h * (0.6 + rnd() * 0.25), t.z + (rnd() - 0.5) * rad), q, s.set(rad, rad * 0.8, rad));
       crownMesh.setMatrixAt(ri, m4);
-      crownMesh.setColorAt(ri, col.setHSL(0.2 + rnd() * 0.08, 0.4, 0.26 + rnd() * 0.1));
+      crownMesh.setColorAt(ri, col.setHSL(0.19 + rnd() * 0.09, 0.25 + rnd() * 0.15, 0.6 + rnd() * 0.2));
       ri++;
     }
   });

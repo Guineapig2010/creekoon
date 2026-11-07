@@ -141,6 +141,7 @@ src/render/                three.js renderer
   scene.js                 world assembly, first-person / map / follow camera modes
   player.js                first-person walker (terrain, rocks, trunks, wading, deep-water return)
   riparian.js              enclosed creek woodland
+  foliage.js               leafy crowns and shrubs (leaf cards, rounded light, leaf shadows)
   expansion.js             new equipment, carts, landmarks, Code Rot, crayfish, Nigatron
   terrain.js, water.js, balls.js, equipment.js, effects.js, camera.js, textures.js
 src/audio.js               WebAudio sound effects, footsteps, machine hum

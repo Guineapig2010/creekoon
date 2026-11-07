@@ -52,7 +52,28 @@ export class SceneView {
     sky.renderOrder = -1;
     this.sky = sky;
     scene.add(sky);
-    const hemi = new THREE.HemisphereLight(0xd6eaff, 0x4e5e30, 1.05);
+    // image-based ambient light from the same sky over a leaf-litter ground: shaded sides of
+    // trunks, rocks, banks and balls keep their colour instead of going black
+    {
+      const envScene = new THREE.Scene();
+      envScene.add(new THREE.Mesh(new THREE.SphereGeometry(10, 32, 16), new THREE.ShaderMaterial({
+        side: THREE.BackSide, depthWrite: false,
+        uniforms: { uSun: { value: this.sunDir } },
+        vertexShader: skyVert,
+        fragmentShader: `varying vec3 vDir; uniform vec3 uSun;
+          void main(){ vec3 d = normalize(vDir); float h = d.y;
+            vec3 sky = mix(vec3(0.62, 0.72, 0.78), vec3(0.28, 0.46, 0.78), pow(max(h, 0.0), 0.55));
+            vec3 ground = mix(vec3(0.20, 0.21, 0.13), vec3(0.32, 0.34, 0.22), smoothstep(-0.6, 0.0, h));
+            vec3 c = h > 0.0 ? sky : ground;
+            c += vec3(1.0, 0.92, 0.78) * pow(max(dot(d, uSun), 0.0), 24.0) * 1.6;
+            gl_FragColor = vec4(c, 1.0); }`,
+      })));
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      scene.environment = pmrem.fromScene(envScene, 0.04).texture;
+      scene.environmentIntensity = 0.75;
+      pmrem.dispose();
+    }
+    const hemi = new THREE.HemisphereLight(0xd6eaff, 0x4e5e30, 0.5);
     scene.add(hemi);
     const sun = new THREE.DirectionalLight(0xfff0d8, 2.6);
     sun.castShadow = this.quality !== 'low';

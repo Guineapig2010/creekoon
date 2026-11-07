@@ -234,7 +234,7 @@ export class Creek {
     this.cfg = cfg;
     this.kind = cfg.kind;
     this.isMain = cfg.kind === 'main';
-    this.sMin = cfg.sMin; this.sMax = cfg.sMax;
+    this.sMin = cfg.sMin; this.sMax = opts.sMax ?? cfg.sMax;
     this.K = cfg.K; this.SLOPES = cfg.SLOPES; this.STEPS = cfg.STEPS; this.POOLS = cfg.POOLS;
     this.opts = opts;
     this.buildCentreline();
@@ -245,7 +245,7 @@ export class Creek {
     this.bakeFlow();
     this.buildColliders();
     // the main creek owns its tributary: the Crawfish Springs runoff stream
-    if (this.isMain && opts.springs !== false) this.springs = new Creek(CREEK_SPRINGS, { yEnd: this.gully.yA });
+    if (this.isMain && opts.springs !== false) this.springs = new Creek(CREEK_SPRINGS, { yEnd: this.gully.yA, sMax: this.gully.springsSMax });
   }
 
   // ---------------------------------------------------------------- centreline
@@ -575,10 +575,21 @@ export class Creek {
 
   /** The Springs stream's last stretch, carved into the main creek's east bank. */
   buildGully() {
-    const end = TRIB_PATH[TRIB_PATH.length - 1];
-    const L = this.locate(end[0], end[1], -1, {});
+    // The Springs stream's own corridor stops just inside the creek's (8.6 m from the creek's
+    // centreline); the gully takes over from there, cut into the creek's ground. It also reaches
+    // back 2.4 m past the stream's end, so the two channels overlap and no bank is left standing
+    // between them.
+    const n = TRIB_PATH.length;
+    const pt = (u) => { const i = Math.min(n - 2, Math.max(0, Math.floor(u))), f = u - i, a = TRIB_PATH[i], b = TRIB_PATH[i + 1]; return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; };
+    let uEnd = n - 1;
+    for (let u = n - 1; u > 0; u -= 0.05) { const p = pt(u); const L = this.locate(p[0], p[1], -1, {}); if (Math.abs(L.d) >= 8.6) { uEnd = u; break; } }
+    const pe = pt(uEnd);
+    const L = this.locate(pe[0], pe[1], -1, {});
     const sB = 497.1;
     const g = { sA: L.s, dA: L.d, sB, dB: this.c(sB) - this.wL(sB) + 0.05, w: 0.44, D: 0.13, U: 1.6 };
+    g.springsSMax = TRIB_S0 + uEnd;
+    g.len = Math.hypot(g.sB - g.sA, g.dB - g.dA);
+    g.tMin = -2.4 / g.len;
     g.yB = this.y0(sB);
     g.yA = g.yB + 0.75;
     this.gully = g;
@@ -592,10 +603,10 @@ export class Creek {
   /** Distance from (s, d) to the gully axis, with the axis parameter. */
   gullyDist(s, d) {
     const g = this.gully;
-    if (!g || s < Math.min(g.sA, g.sB) - 1.5 || s > Math.max(g.sA, g.sB) + 1.5) return null;
+    if (!g || s < Math.min(g.sA, g.sB) - 3.2 || s > Math.max(g.sA, g.sB) + 3.2) return null;
     const es = g.sB - g.sA, ed = g.dB - g.dA;
     let t = ((s - g.sA) * es + (d - g.dA) * ed) / (es * es + ed * ed);
-    t = clamp(t, 0, 1);
+    t = clamp(t, g.tMin, 1);
     return { t, dist: Math.hypot(s - (g.sA + es * t), d - (g.dA + ed * t)) };
   }
 
@@ -858,7 +869,7 @@ export class Creek {
       slabs: this.slabs.filter((x) => near(x.s0, x.s1, 0.3)),
       pads: this.pads.filter((p) => near(p.s0, p.s1, 0.8) || near(p.chute[0].s, p.chute[2].s, 0.4)),
       hasAlt: near(this.alt.s0, this.alt.s1, 0.3),
-      hasGully: !!this.gully && near(Math.min(this.gully.sA, this.gully.sB), Math.max(this.gully.sA, this.gully.sB), 1.8),
+      hasGully: !!this.gully && near(Math.min(this.gully.sA, this.gully.sB), Math.max(this.gully.sA, this.gully.sB), 3.4),
     };
   }
 

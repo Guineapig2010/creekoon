@@ -142,6 +142,27 @@ export function detailTexture(size = 256, seed = 1, contrast = 0.35) {
   return tex(c, { repeat: true, srgb: false });
 }
 
+/** Forest-floor detail: the soil noise plus leaf litter, small pebbles and twigs (greyscale,
+ *  multiplied with the terrain's vertex colours). Tiles seamlessly. */
+export function groundTexture(size = 512, seed = 3) {
+  const t = detailTexture(size, seed, 0.38);
+  const c = t.image, g = c.getContext('2d');
+  const rnd = mulberry32(seed * 97 + 5);
+  const wrap = (fn) => { for (const ox of [-size, 0, size]) for (const oy of [-size, 0, size]) { g.save(); g.translate(ox, oy); fn(); g.restore(); } };
+  for (let i = 0; i < size * 1.6; i++) {
+    const x = rnd() * size, y = rnd() * size, l = size * (0.006 + rnd() * 0.012), a = rnd() * Math.PI;
+    const v = rnd() < 0.55 ? 150 + rnd() * 80 : 40 + rnd() * 50;
+    const al = 0.25 + rnd() * 0.4;
+    wrap(() => { g.fillStyle = `rgba(${v},${v},${v},${al})`; g.beginPath(); g.ellipse(x, y, l, l * (0.4 + rnd() * 0.3), a, 0, Math.PI * 2); g.fill(); });
+  }
+  for (let i = 0; i < size * 0.12; i++) {
+    const x = rnd() * size, y = rnd() * size, l = size * (0.02 + rnd() * 0.05), a = rnd() * Math.PI;
+    wrap(() => { g.strokeStyle = `rgba(45,40,35,${0.35 + rnd() * 0.3})`; g.lineWidth = 1 + rnd() * 1.5; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); });
+  }
+  t.needsUpdate = true;
+  return t;
+}
+
 /** Tileable normal map for water ripples. */
 export function waterNormalTexture(size = 256) {
   const c = canvas(size, size), g = c.getContext('2d');
@@ -264,14 +285,21 @@ export function woodTexture(size = 256, base = '#9a6a3c') {
 
 export function barkTexture(size = 128) {
   const c = canvas(size, size), g = c.getContext('2d');
-  g.fillStyle = '#4a3a2a'; g.fillRect(0, 0, size, size);
+  // grey-brown oak and sycamore bark: furrows, paler plates and lichen flecks
+  g.fillStyle = '#857a6c'; g.fillRect(0, 0, size, size);
   const rnd = mulberry32(31);
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 26; i++) {
+    const x = rnd() * size, y = rnd() * size, w = size * (0.08 + rnd() * 0.14), h = size * (0.1 + rnd() * 0.25);
+    g.fillStyle = `rgba(${rnd() < 0.5 ? '178,170,152' : '120,108,92'},0.45)`;
+    g.fillRect(x, y, w, h); g.fillRect(x - size, y, w, h); g.fillRect(x, y - size, w, h);
+  }
+  for (let i = 0; i < 70; i++) {
     const x = rnd() * size;
-    g.strokeStyle = `rgba(${rnd() < 0.5 ? '25,18,10' : '110,90,70'},0.5)`;
-    g.lineWidth = 1 + rnd() * 3;
+    g.strokeStyle = `rgba(${rnd() < 0.6 ? '52,42,32' : '150,138,120'},${0.35 + rnd() * 0.3})`;
+    g.lineWidth = 1 + rnd() * 2.5;
     g.beginPath(); g.moveTo(x, 0); g.lineTo(x + (rnd() - 0.5) * 8, size); g.stroke();
   }
+  for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(150,170,120,${0.2 + rnd() * 0.3})`; g.beginPath(); g.arc(rnd() * size, rnd() * size, 1 + rnd() * 3, 0, 7); g.fill(); }
   return tex(c, { repeat: true });
 }
 

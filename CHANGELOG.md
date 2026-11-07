@@ -1,5 +1,42 @@
 # Changelog
 
+## 2.3.0 — A more natural woodland, and the Springs confluence opened up
+
+### Changed
+
+- **The Springs confluence has no wall any more.**
+  - The Springs stream used to end about 7.8 m from the creek's centre line, but the creek's
+    ground reaches out to about 9.9 m. That strip was left uncarved, so a bank of dirt stood
+    across the stream while the current ran on through it.
+  - The stream now ends 8.6 m out, and the gully reaches 2.4 m back past it, so the two
+    channels overlap. The water level matches across the join (2.03 m on both sides).
+  - Springs balls hand over to the creek inside its bounds and are paid at the finish.
+- **Trees and shrubs are leafy instead of faceted.**
+  - Crowns and bushes are clusters of alpha-cut leaf cards from a painted leaf spray, with
+    rounded light, darker interiors, slight light through the leaves and leaf-shaped
+    shadows.
+  - This applies to the creek-side woodland and the distant forest. The distant forest is
+    now mostly oak and sycamore, with few conifers.
+- **Trunks:** tapered, slightly wandering trunks with grey-brown oak and pale sycamore bark
+  (furrows, plates, lichen). They no longer render almost black.
+- **Lighting:** an image-based ambient light from the same sky over a leaf-litter ground
+  lights the shaded sides of trunks, rocks, banks and balls. The hemisphere light is reduced
+  to match.
+- **Ground and rocks:** the forest floor has leaf litter, pebbles and twigs, with bump
+  shading. Rocks have bump relief.
+
+### Tests actually run
+
+- Headless playtest (quick mode): 70 checks. The full run passed 69 and caught the Springs
+  hand-off bug, which was then fixed. Sections 2, 6, 7 and 8 were re-run after the fix: 33
+  passed, 0 failed.
+- Browser (Chromium, software GL, medium quality): the confluence from above and in first
+  person, the lower creek, the Shelf drop and Flat Rocks.
+
+### Provisional
+
+- A faint seam can still show from above where the Springs ground meets the creek's ground.
+
 ## 2.2.0 — Only the creator's places, machines flat out
 
 ### Changed
